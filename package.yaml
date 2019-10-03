@@ -1,0 +1,73 @@
+name:                shamir
+version:             0.1.0
+github:              "adjoint-io/shamir"
+license:             MIT
+maintainer:          "Adjoint Inc (info@adjoint.io)"
+category:            Cryptography
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+description:         Please see the README on GitHub at <https://github.com/adjoint-io/shamir#readme>
+
+dependencies:
+- base
+- protolude
+- galois-field >= 1.0.0
+
+default-extensions:
+  - LambdaCase
+  - RecordWildCards
+  - OverloadedStrings
+  - NoImplicitPrelude
+  - FlexibleInstances
+  - FlexibleContexts
+  - ScopedTypeVariables
+  - RankNTypes
+
+ghc-options:
+  -Wall
+  -Werror
+  -Wcompat
+  -Wincomplete-record-updates
+  -Wredundant-constraints
+  -Wno-unused-matches
+  -Wno-name-shadowing
+  -Wno-type-defaults
+  -Wno-orphans
+  -Wno-incomplete-uni-patterns
+  -Wno-incomplete-patterns
+
+library:
+  source-dirs: src
+  exposed-modules:
+  - Shamir
+
+tests:
+  shamir-test:
+    main: Test.Main.hs
+    source-dirs: test
+    dependencies:
+      - shamir
+      - QuickCheck
+      - tasty
+      - tasty-discover
+      - tasty-hunit
+      - tasty-quickcheck
+
+benchmarks:
+  shamir-benchmarks:
+    source-dirs:
+      - bench
+      - test
+    main: Main.hs
+    dependencies:
+      - shamir
+      - criterion
+      - QuickCheck
+      - tasty
+      - tasty-quickcheck
+      - tasty-hunit
+    other-modules:
+      - Test.Reference
