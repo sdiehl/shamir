@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE ParallelListComp #-}
 module Shamir
   ( shareSecret
@@ -7,14 +9,14 @@ module Shamir
 import Protolude hiding (quot)
 import Control.Monad.Random (MonadRandom)
 import Data.Euclidean (quot)
-import Data.Field.Galois (PrimeField(..), rnd, GaloisField)
+import Data.Field.Galois (PrimeField(..), rnd)
 import Data.Poly (VPoly, toPoly, eval, scale, deriv)
 import qualified Data.Vector as V
 
 data Share f = Share
   { shareX :: f
   , shareY :: f
-  } deriving (Show, Eq)
+  } deriving (Show, Eq, Generic, NFData)
 
 -- | Create shares from a secret
 shareSecret :: (MonadRandom m, PrimeField f) => f -> Int -> Int -> m [Share f]
@@ -31,7 +33,7 @@ shareSecret secret k n
 reconstructSecret :: forall f. PrimeField f => [Share f] -> f
 reconstructSecret shares = eval (lagrangeInterpolate shares) 0
   where
-    lagrangeInterpolate :: (GaloisField f) => [Share f] -> VPoly f
+    lagrangeInterpolate :: [Share f] -> VPoly f
     lagrangeInterpolate xys = sum
       [ scale 0 f (roots `quot` (root x))
       | f <- zipWith (/) ys phis

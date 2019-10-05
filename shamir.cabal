@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 5fe2ff3f49d9d9f24286d6f2a5cccaf862e7f8cc42959c3271c1384200183617
+-- hash: c5c1afa4bf8c85ae1a2988c42d806adc319aefec4b04ceee3a69001bd9de87b3
 
 name:           shamir
 version:        0.1.0
@@ -74,10 +74,9 @@ benchmark shamir-benchmarks
   type: exitcode-stdio-1.0
   main-is: Main.hs
   other-modules:
-      Test.Reference
+      Paths_shamir
   hs-source-dirs:
       bench
-      test
   default-extensions: LambdaCase RecordWildCards OverloadedStrings NoImplicitPrelude FlexibleInstances FlexibleContexts ScopedTypeVariables RankNTypes
   ghc-options: -Wall -Werror -Wcompat -Wincomplete-record-updates -Wredundant-constraints -Wno-unused-matches -Wno-name-shadowing -Wno-type-defaults -Wno-orphans -Wno-incomplete-uni-patterns -Wno-incomplete-patterns
   build-depends:
@@ -86,6 +85,7 @@ benchmark shamir-benchmarks
     , base
     , criterion
     , galois-field >=1.0.0
+    , pairing
     , poly
     , protolude
     , semirings

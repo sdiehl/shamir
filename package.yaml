@@ -63,16 +63,13 @@ tests:
 
 benchmarks:
   shamir-benchmarks:
-    source-dirs:
-      - bench
-      - test
+    source-dirs: bench
     main: Main.hs
     dependencies:
-      - shamir
       - criterion
+      - pairing
       - QuickCheck
+      - shamir
       - tasty
       - tasty-quickcheck
       - tasty-hunit
-    other-modules:
-      - Test.Reference
