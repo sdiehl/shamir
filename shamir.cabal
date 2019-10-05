@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 86d87f4eb452dc8939da6d2234556bbe9942169d82b177084a6f30f8d81035d3
+-- hash: 5fe2ff3f49d9d9f24286d6f2a5cccaf862e7f8cc42959c3271c1384200183617
 
 name:           shamir
 version:        0.1.0
@@ -28,20 +28,25 @@ library
   exposed-modules:
       Shamir
   other-modules:
+      Interpolation
       Paths_shamir
   hs-source-dirs:
       src
   default-extensions: LambdaCase RecordWildCards OverloadedStrings NoImplicitPrelude FlexibleInstances FlexibleContexts ScopedTypeVariables RankNTypes
   ghc-options: -Wall -Werror -Wcompat -Wincomplete-record-updates -Wredundant-constraints -Wno-unused-matches -Wno-name-shadowing -Wno-type-defaults -Wno-orphans -Wno-incomplete-uni-patterns -Wno-incomplete-patterns
   build-depends:
-      base
+      MonadRandom
+    , base
     , galois-field >=1.0.0
+    , poly
     , protolude
+    , semirings
+    , vector
   default-language: Haskell2010
 
 test-suite shamir-test
   type: exitcode-stdio-1.0
-  main-is: Test.Main.hs
+  main-is: Main.hs
   other-modules:
       Paths_shamir
   hs-source-dirs:
@@ -49,15 +54,20 @@ test-suite shamir-test
   default-extensions: LambdaCase RecordWildCards OverloadedStrings NoImplicitPrelude FlexibleInstances FlexibleContexts ScopedTypeVariables RankNTypes
   ghc-options: -Wall -Werror -Wcompat -Wincomplete-record-updates -Wredundant-constraints -Wno-unused-matches -Wno-name-shadowing -Wno-type-defaults -Wno-orphans -Wno-incomplete-uni-patterns -Wno-incomplete-patterns
   build-depends:
-      QuickCheck
+      MonadRandom
+    , QuickCheck
     , base
     , galois-field >=1.0.0
+    , pairing
+    , poly
     , protolude
+    , semirings
     , shamir
     , tasty
     , tasty-discover
     , tasty-hunit
     , tasty-quickcheck
+    , vector
   default-language: Haskell2010
 
 benchmark shamir-benchmarks
@@ -71,13 +81,17 @@ benchmark shamir-benchmarks
   default-extensions: LambdaCase RecordWildCards OverloadedStrings NoImplicitPrelude FlexibleInstances FlexibleContexts ScopedTypeVariables RankNTypes
   ghc-options: -Wall -Werror -Wcompat -Wincomplete-record-updates -Wredundant-constraints -Wno-unused-matches -Wno-name-shadowing -Wno-type-defaults -Wno-orphans -Wno-incomplete-uni-patterns -Wno-incomplete-patterns
   build-depends:
-      QuickCheck
+      MonadRandom
+    , QuickCheck
     , base
     , criterion
     , galois-field >=1.0.0
+    , poly
     , protolude
+    , semirings
     , shamir
     , tasty
     , tasty-hunit
     , tasty-quickcheck
+    , vector
   default-language: Haskell2010

@@ -15,6 +15,10 @@ dependencies:
 - base
 - protolude
 - galois-field >= 1.0.0
+- MonadRandom
+- poly
+- semirings
+- vector
 
 default-extensions:
   - LambdaCase
@@ -46,11 +50,12 @@ library:
 
 tests:
   shamir-test:
-    main: Test.Main.hs
+    main: Main.hs
     source-dirs: test
     dependencies:
-      - shamir
+      - pairing
       - QuickCheck
+      - shamir
       - tasty
       - tasty-discover
       - tasty-hunit
