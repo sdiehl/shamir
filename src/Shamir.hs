@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE ParallelListComp #-}
+-- Shamir secret sharing using Lagrange interpolation
 module Shamir
   ( shareSecret
   , reconstructSecret

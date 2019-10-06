@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: c5c1afa4bf8c85ae1a2988c42d806adc319aefec4b04ceee3a69001bd9de87b3
+-- hash: 989638b7f102cfc0ff0eb1aa9e7d9e992a899a5a2cbb52228aa01f8d516c3ba7
 
 name:           shamir
 version:        0.1.0
@@ -27,13 +27,13 @@ source-repository head
 library
   exposed-modules:
       Shamir
+      Shamir.FFT
   other-modules:
-      Interpolation
       Paths_shamir
   hs-source-dirs:
       src
   default-extensions: LambdaCase RecordWildCards OverloadedStrings NoImplicitPrelude FlexibleInstances FlexibleContexts ScopedTypeVariables RankNTypes
-  ghc-options: -Wall -Werror -Wcompat -Wincomplete-record-updates -Wredundant-constraints -Wno-unused-matches -Wno-name-shadowing -Wno-type-defaults -Wno-orphans -Wno-incomplete-uni-patterns -Wno-incomplete-patterns
+  ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wredundant-constraints -Wno-unused-matches -Wno-name-shadowing -Wno-type-defaults -Wno-orphans -Wno-incomplete-uni-patterns -Wno-incomplete-patterns
   build-depends:
       MonadRandom
     , base
@@ -52,7 +52,7 @@ test-suite shamir-test
   hs-source-dirs:
       test
   default-extensions: LambdaCase RecordWildCards OverloadedStrings NoImplicitPrelude FlexibleInstances FlexibleContexts ScopedTypeVariables RankNTypes
-  ghc-options: -Wall -Werror -Wcompat -Wincomplete-record-updates -Wredundant-constraints -Wno-unused-matches -Wno-name-shadowing -Wno-type-defaults -Wno-orphans -Wno-incomplete-uni-patterns -Wno-incomplete-patterns
+  ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wredundant-constraints -Wno-unused-matches -Wno-name-shadowing -Wno-type-defaults -Wno-orphans -Wno-incomplete-uni-patterns -Wno-incomplete-patterns
   build-depends:
       MonadRandom
     , QuickCheck
@@ -78,7 +78,7 @@ benchmark shamir-benchmarks
   hs-source-dirs:
       bench
   default-extensions: LambdaCase RecordWildCards OverloadedStrings NoImplicitPrelude FlexibleInstances FlexibleContexts ScopedTypeVariables RankNTypes
-  ghc-options: -Wall -Werror -Wcompat -Wincomplete-record-updates -Wredundant-constraints -Wno-unused-matches -Wno-name-shadowing -Wno-type-defaults -Wno-orphans -Wno-incomplete-uni-patterns -Wno-incomplete-patterns
+  ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wredundant-constraints -Wno-unused-matches -Wno-name-shadowing -Wno-type-defaults -Wno-orphans -Wno-incomplete-uni-patterns -Wno-incomplete-patterns
   build-depends:
       MonadRandom
     , QuickCheck
