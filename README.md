@@ -1,7 +1,7 @@
-# shamir
+# Shamir
 
 Shamir secret sharing is a cryptographic technique to split an arbitrary secret S
-into N parts, of which at least K are required to reconstruct S. 
+into N parts, of which at least K are required to reconstruct S.
 
 Splitting a secret works by encoding the secret as the constant in a random
 polynomial of K degree.
@@ -11,7 +11,34 @@ interpolation.
 
 ## Usage
 
-XXX
+A simple example of sharing and reconstructing a secret:
+
+```haskell
+import Protolude
+import Data.Field.Galois (Prime)
+import Shamir (shareSecret, reconstructSecret)
+
+type Fq = Prime 21888242871839275222246405745257275088696311157297823662689037894645226208583
+
+secret :: Fq
+secret = 123456789
+
+k :: Int
+k = 3
+
+n :: Int
+n = 6
+
+main :: IO ()
+main = do
+  putText $ "Parties: " <> show n
+  putText $ "Threshold: " <> show k
+  shares <- shareSecret secret k n
+  putText $ "Secret reconstructed from minimum subset of shares: "
+    <> (show $ secret == reconstructSecret (take k shares))
+  putText $ "Secret reconstructed from less than minimum subset of shares: "
+    <> (show $ secret == reconstructSecret (take (k - 1) shares))
+```
 
 ## License
 
