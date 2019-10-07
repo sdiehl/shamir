@@ -36,7 +36,7 @@ main = do
   shares <- shareSecret secret k n
   putText $ "Secret reconstructed from minimum subset of shares: "
     <> (show $ secret == reconstructSecret (take k shares))
-  putText $ "Secret reconstructed from minimum subset of shares: "
+  putText $ "Secret reconstructed from less than minimum subset of shares: "
     <> (show $ secret == reconstructSecret (take (k - 1) shares))
 ```
 
