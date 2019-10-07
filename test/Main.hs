@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeApplications #-}
 module Main where
 
 import Protolude
@@ -18,7 +19,7 @@ combinations m xs = combsBySize xs !! m
 
 prop_shamir_lagrange :: Fr -> Property
 prop_shamir_lagrange secret = monadicIO $ do
-  n <- getPositive <$> (lift . generate $ arbitrary `suchThat` (> Positive 2))
+  n <- lift . generate $ arbitrary `suchThat` (> 2)
   k <- getPositive <$> (lift . generate $ arbitrary `suchThat` (< Positive n))
   shares <- lift $ shareSecret secret k n
 
@@ -32,19 +33,15 @@ prop_shamir_lagrange secret = monadicIO $ do
 
 prop_shamir_FFT :: Fr -> Property
 prop_shamir_FFT secret = monadicIO $ do
-  n <- getPositive <$> (lift . generate $ arbitrary `suchThat` (\x -> x < Positive 28 && x > Positive 2))
+  -- n must be a power of 2
+  n <- (^) 2 <$> (lift . generate $ arbitrary @Int `suchThat` (\x -> x < 20 && x > 2))
   k <- getPositive <$> (lift . generate $ arbitrary `suchThat` (< Positive n))
   shares <- lift $ FFT.shareSecret secret k n
 
-  traceShowM (n, k, secret, FFT.reconstructSecret getRootOfUnity shares)
-
-  -- Combinations without replacement grow \binom{n}{k},
-  -- so we take the first 100 combinations
-  let fails = and $ (\i -> and (((/=) secret . FFT.reconstructSecret getRootOfUnity) <$> take 5 (combinations i shares))
-                    ) <$> [0..k-1]
-  let successes = and $ (\i -> and (((==) secret . FFT.reconstructSecret getRootOfUnity) <$> take 5 (combinations i shares))
-                        ) <$> [k..n]
-  pure $ and [fails, successes]
+  pure $ and
+    [ secret == FFT.reconstructSecret getRootOfUnity (take k shares)
+    , secret /= FFT.reconstructSecret getRootOfUnity (take (k-1) shares)
+    ]
 
 main :: IO ()
 main = defaultMain $
