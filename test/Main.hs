@@ -34,9 +34,9 @@ prop_shamir_lagrange secret = monadicIO $ do
 prop_shamir_FFT :: Fr -> Property
 prop_shamir_FFT secret = monadicIO $ do
   -- n must be a power of 2
-  n <- (^) 2 <$> (lift . generate $ arbitrary @Int `suchThat` (\x -> x < 20 && x > 2))
+  n <- (^) 2 <$> (lift . generate $ arbitrary @Int `suchThat` (\x -> x < 5 && x > 2))
   k <- getPositive <$> (lift . generate $ arbitrary `suchThat` (< Positive n))
-  shares <- lift $ FFT.shareSecret secret k n
+  shares <- lift $ FFT.shareSecret getRootOfUnity secret k n
 
   pure $ and
     [ secret == FFT.reconstructSecret getRootOfUnity (take k shares)

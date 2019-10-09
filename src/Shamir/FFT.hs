@@ -82,15 +82,15 @@ interpolate :: GaloisField k => (Int -> k) -> [k] -> VPoly k
 interpolate primRoots pts = toPoly . V.fromList $ inverseDft primRoots (padToNearestPowerOfTwo pts)
 
 -- | Create shares from a secret
-shareSecret :: (MonadRandom m, PrimeField f) => f -> Int -> Int -> m [f]
-shareSecret secret k n
+-- See https://mortendahl.github.io/2017/06/24/secret-sharing-part2/
+shareSecret :: (MonadRandom m, PrimeField f) => (Int -> f) -> f -> Int -> Int -> m [f]
+shareSecret primRoots secret k n
   | k <= 0 || n <= 0 = panic $ "k and n must be positive integers"
   | k > n = panic $ "k cannot be greater than n"
   | otherwise = do
     rndVs <- replicateM (k-1) rnd
-    let poly = toPoly . V.fromList $ coeffs
-        coeffs = secret : rndVs
-    pure $ eval poly . fromIntegral <$> [1..n]
+    let coeffs = secret : rndVs ++ replicate (n + 1 - k) 0
+    pure $ fft primRoots coeffs
 
 -- | Reconstruct secret using Fast Fourier Transform. Solve for f(0).
 reconstructSecret :: PrimeField f => (Int -> f) -> [f] -> f
