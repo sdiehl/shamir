@@ -1,9 +1,9 @@
 {-# LANGUAGE TypeApplications #-}
 module Main where
 
-import Protolude
+import Protolude hiding (head)
 
-import Data.List ((!!))
+import Data.List ((!!), head)
 import Data.Pairing.BN254 (Fr, getRootOfUnity)
 import Shamir (shareSecret, reconstructSecret)
 import qualified Shamir.FFT as FFT (shareSecret, reconstructSecret)
@@ -37,9 +37,10 @@ prop_shamir_FFT secret = monadicIO $ do
   n <- (^) 2 <$> (lift . generate $ arbitrary @Int `suchThat` (\x -> x < 5 && x > 2))
   k <- getPositive <$> (lift . generate $ arbitrary `suchThat` (< Positive n))
   shares <- lift $ FFT.shareSecret getRootOfUnity secret k n
-
+  traceShowM (n, k, secret)
   pure $ and
-    [ secret == FFT.reconstructSecret getRootOfUnity (take k shares)
+    [ secret == FFT.reconstructSecret getRootOfUnity shares
+    , secret == FFT.reconstructSecret getRootOfUnity (take k shares)
     , secret /= FFT.reconstructSecret getRootOfUnity (take (k-1) shares)
     ]
 
