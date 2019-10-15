@@ -3,11 +3,12 @@ module Shamir.FFT
   , reconstructSecret
   , shareSecrets
   , reconstructSecrets
+  , getRootOfUnity
   ) where
 
 import Protolude
 import Control.Monad.Random (MonadRandom)
-import Data.Field.Galois (PrimeField(..), rnd, GaloisField, pow)
+import Data.Field.Galois (PrimeField(..), rnd, GaloisField, pow, char)
 import qualified Data.List as List
 import Data.Poly (VPoly, toPoly, eval)
 import qualified Data.Vector as V
@@ -19,6 +20,12 @@ type CoeffVec f = [f]
 -- evaluated at certain roots of unity. (In our case the length of
 -- these lists will be a power of two.)
 type DFT f = [f]
+
+-- | Calculate roots of unity of powers of 2
+getRootOfUnity :: forall f. PrimeField f => Int -> f
+getRootOfUnity k
+  | 0 <= k && k <= 28 = 5^((char (witness :: f) - 1) `div` (2^k))
+  | otherwise         = panic "calcRootOfUnity: No primitive root for given power of 2"
 
 -- | Fast Fourier transformation.
 fft

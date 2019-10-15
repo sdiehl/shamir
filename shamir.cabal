@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 989638b7f102cfc0ff0eb1aa9e7d9e992a899a5a2cbb52228aa01f8d516c3ba7
+-- hash: db073f512d77eece1a9a234fa6e7664d2aef45a1bac46071e3b45602a783660c
 
 name:           shamir
 version:        0.1.0
@@ -58,7 +58,6 @@ test-suite shamir-test
     , QuickCheck
     , base
     , galois-field >=1.0.0
-    , pairing
     , poly
     , protolude
     , semirings
@@ -85,7 +84,6 @@ benchmark shamir-benchmarks
     , base
     , criterion
     , galois-field >=1.0.0
-    , pairing
     , poly
     , protolude
     , semirings

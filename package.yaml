@@ -53,7 +53,6 @@ tests:
     main: Main.hs
     source-dirs: test
     dependencies:
-      - pairing
       - QuickCheck
       - shamir
       - tasty
@@ -67,7 +66,6 @@ benchmarks:
     main: Main.hs
     dependencies:
       - criterion
-      - pairing
       - QuickCheck
       - shamir
       - tasty
