@@ -4,6 +4,11 @@ module Shamir.FFT
   , shareSecrets
   , reconstructSecrets
   , getRootOfUnity
+  , getRootOfUnity3
+  , fft
+  , fft3
+  , inverseDft
+  , inverseDft3
   ) where
 
 import Protolude
@@ -24,8 +29,13 @@ type DFT f = [f]
 -- | Calculate roots of unity of powers of 2
 getRootOfUnity :: forall f. PrimeField f => Int -> f
 getRootOfUnity k
-  | 0 <= k && k <= 28 = 5^((char (witness :: f) - 1) `div` (2^k))
-  | otherwise         = panic "calcRootOfUnity: No primitive root for given power of 2"
+  | 0 <= k     = 5^((char (witness :: f) - 1) `div` (2^k))
+  | otherwise  = panic "getRootOfUnity: No primitive root for given power of 2"
+
+getRootOfUnity3 :: forall f. PrimeField f => Int -> f
+getRootOfUnity3 k
+  | 0 <= k     = 5^((char (witness :: f) - 1) `div` (3^k))
+  | otherwise  = panic "getRootOfUnity: No primitive root for given power of 3"
 
 -- | Fast Fourier transformation.
 fft
@@ -49,7 +59,7 @@ fft omega_n as
       $ List.zip3 y0 y1 omegas
 
 fft3
-  :: forall k. GaloisField k
+  :: GaloisField k
   => (Int -> k) -- ^ function that gives for input n the principal (3^n)-th root of unity
   -> CoeffVec k -- ^ length should be n
   -> DFT k
@@ -57,20 +67,15 @@ fft3 omega_n as
   = case length as of
       1 -> as
       n -> let (bs, cs, ds) = split3 as
-               y0, y1, y2 :: [k]
                (y0, y1, y2) = (fft3 omega_n bs, fft3 omega_n cs, fft3 omega_n ds)
-               xs0, xs1, xs2 :: [k]
                (xs0, xs1, xs2) = split3 $ (pow (omega_n (log3 n))) <$> [0..n]
            in combine $ List.zip6 y0 y1 y2 xs0 xs1 xs2
   where
-    split3 ls = foldl' (\(bsi, csi, dsi) (i, ai) -> case i `mod` 3 of
+    split3 ls = foldr (\(i, ai) (bsi, csi, dsi) -> case i `mod` 3 of
                               0 -> (ai : bsi, csi, dsi)
                               1 -> (bsi, ai : csi, dsi)
                               2 -> (bsi, csi, ai : dsi)
                        ) ([], [], []) (zip [1..] ls)
-      -- let thrd = length as `quot` 3
-      --           in (take thrd as, take thrd (drop thrd as), drop (2*thrd) as)
-    combine :: [(k, k, k, k, k, k)] -> [k]
     combine
       = (\zs -> map (\(a, _, _) -> a) zs ++ map (\(_, b, _) -> b) zs ++ map (\(_, _, c) -> c) zs)
       . map (\(yk0, yk1, yk2, xk0, xk1, xk2) ->
@@ -133,12 +138,11 @@ interpolate primRoots pts = toPoly . V.fromList $ inverseDft primRoots (padToNea
 -- | Packed secrets
 shareSecrets
   :: (MonadRandom m, PrimeField f)
-  => (Int -> f)                     -- Roots of unity
-  -> [f]                            -- Secrets
+  => [f]                            -- Secrets
   -> Int                            -- Threshold
   -> Int                            -- Number of shares
   -> m [f]
-shareSecrets primRoots secrets t n
+shareSecrets secrets t n
   | t <= 0 || n <= 0 = panic $ "k and n must be positive integers"
   | t > n = panic $ "k cannot be greater than n"
   -- TODO: N must be a power of 2
@@ -149,9 +153,9 @@ shareSecrets primRoots secrets t n
       let smallValues = 0 : secrets ++ rndVs
       traceShowM $ length smallValues
       -- Run backward FFT to recover polynomial in coefficient representation
-      let smallCoeffs = inverseDft primRoots smallValues
-          largeCoeffs = smallCoeffs -- ++ replicate (orderLarge - orderSmall) 0
-          largeValues = fft primRoots largeCoeffs
+      let smallCoeffs = inverseDft getRootOfUnity smallValues
+          largeCoeffs = smallCoeffs ++ replicate (orderLarge - orderSmall) 0
+          largeValues = fft3 getRootOfUnity3 largeCoeffs
       -- TODO: Use a different FFT (e.g FFT3). How to find a divisor or q-1?
       -- Another solution is to generate the prime field
       pure $ drop 1 largeValues
@@ -170,23 +174,23 @@ reconstructSecrets _ [] _ = []
 reconstructSecrets primRoots shares k = secrets
   where
     largeValues = 0 : shares
-    largeCoeffs = inverseDft primRoots largeValues
+    largeCoeffs = inverseDft3 getRootOfUnity3 largeValues
     smallCoeffs = largeCoeffs -- take (length shares) largeCoeffs
-    smallValues = fft primRoots smallCoeffs
+    smallValues = fft getRootOfUnity smallCoeffs
     secrets = take k (drop 1 smallValues)
 
 -- | Create shares from a secret
 -- See https://mortendahl.github.io/2017/06/24/secret-sharing-part2/
-shareSecret :: (MonadRandom m, PrimeField f) => (Int -> f) -> f -> Int -> Int -> m [f]
-shareSecret primRoots secret k n
+shareSecret :: (MonadRandom m, PrimeField f) => f -> Int -> Int -> m [f]
+shareSecret secret k n
   | k <= 0 || n <= 0 = panic $ "k and n must be positive integers"
   | k > n = panic $ "k cannot be greater than n"
   | otherwise = do
     rndVs <- replicateM (k-1) rnd
     let coeffs = secret : rndVs ++ replicate (n + 1 - k) 0
-    pure $ fft primRoots coeffs
+    pure $ fft getRootOfUnity coeffs
 
 -- | Reconstruct secret using Fast Fourier Transform. Solve for f(0).
-reconstructSecret :: PrimeField f => (Int -> f) -> [f] -> f
-reconstructSecret _ [] = 0
-reconstructSecret primRoots shares = eval (interpolate primRoots shares) 0
+reconstructSecret :: PrimeField f => [f] -> f
+reconstructSecret [] = 0
+reconstructSecret shares = eval (interpolate getRootOfUnity shares) 0

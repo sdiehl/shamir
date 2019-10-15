@@ -2,12 +2,12 @@
 {-# LANGUAGE TypeApplications #-}
 module Main where
 
-import Protolude hiding (head)
+import Protolude
 
 import Data.Field.Galois (Prime)
-import Data.List ((!!), head)
+import Data.List ((!!))
 import Shamir (shareSecret, reconstructSecret)
-import qualified Shamir.FFT as FFT (shareSecret, reconstructSecret, getRootOfUnity)
+import qualified Shamir.FFT as FFT (shareSecret, reconstructSecret)
 import Test.QuickCheck.Monadic (monadicIO)
 import Test.Tasty
 import Test.Tasty.QuickCheck
@@ -39,12 +39,12 @@ prop_shamir_FFT secret = monadicIO $ do
   -- n must be a power of 2
   n <- (^) 2 <$> (lift . generate $ arbitrary @Int `suchThat` (\x -> x < 5 && x > 2))
   k <- getPositive <$> (lift . generate $ arbitrary `suchThat` (< Positive n))
-  shares <- lift $ FFT.shareSecret FFT.getRootOfUnity secret k n
+  shares <- lift $ FFT.shareSecret secret k n
   pure $ and
-    [ secret == FFT.reconstructSecret FFT.getRootOfUnity shares
+    [ secret == FFT.reconstructSecret shares
     -- TODO: Enable this. Still not work for less than n shares
     -- , secret == FFT.reconstructSecret getRootOfUnity (take k shares)
-    , secret /= FFT.reconstructSecret FFT.getRootOfUnity (take (k-1) shares)
+    , secret /= FFT.reconstructSecret (take (k-1) shares)
     ]
 
 main :: IO ()
