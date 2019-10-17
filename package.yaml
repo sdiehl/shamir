@@ -14,6 +14,7 @@ description:         Please see the README on GitHub at <https://github.com/adjo
 dependencies:
 - base
 - protolude
+- error-util
 - galois-field >= 1.0.0
 - MonadRandom
 - poly

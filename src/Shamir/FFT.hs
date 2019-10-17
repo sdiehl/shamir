@@ -1,17 +1,18 @@
 module Shamir.FFT
-  ( shareSecret
-  , reconstructSecret
-  , shareSecrets
+  ( -- shareSecret
+  -- , reconstructSecret
+    shareSecrets
   , reconstructSecrets
   , getRootOfUnity
   , getRootOfUnity3
-  , fft
+  , fft2
   , fft3
-  , inverseDft
+  , inverseDft2
   , inverseDft3
   ) where
 
 import Protolude
+import Control.Error.Operator (assertM)
 import Control.Monad.Random (MonadRandom)
 import Data.Field.Galois (PrimeField(..), rnd, GaloisField, pow, char)
 import qualified Data.List as List
@@ -26,6 +27,9 @@ type CoeffVec f = [f]
 -- these lists will be a power of two.)
 type DFT f = [f]
 
+generateParameters :: Int -> Integer -> Integer -> (Integer, Integer, Integer)
+generateParameters = notImplemented
+
 -- | Calculate roots of unity of powers of 2
 getRootOfUnity :: forall f. PrimeField f => Int -> f
 getRootOfUnity k
@@ -37,58 +41,69 @@ getRootOfUnity3 k
   | 0 <= k     = 5^((char (witness :: f) - 1) `div` (3^k))
   | otherwise  = panic "getRootOfUnity: No primitive root for given power of 3"
 
+
 -- | Fast Fourier transformation.
-fft
+fft2
   :: GaloisField k
-  => (Int -> k) -- ^ function that gives for input n the principal (2^n)-th root of unity
+  => k          -- ^ function that gives for input n the principal (3^n)-th root of unity
   -> CoeffVec k -- ^ length should be n
   -> DFT k
-fft omega_n as
+fft2 omega as
   = case length as of
       1 -> as
-      n ->
-        let (as0, as1) = split as
-            y0 = fft omega_n as0
-            y1 = fft omega_n as1
-            omegas = (pow (omega_n (log2 n))) <$> [0..n]
-        in combine y0 y1 omegas
-  where
-    combine y0 y1 omegas
-      = (\xs -> map fst xs ++ map snd xs)
-      $ map (\(yk0, yk1, currentOmega) -> (yk0 + currentOmega * yk1, yk0 - currentOmega * yk1))
-      $ List.zip3 y0 y1 omegas
+      n -> snd <$> List.sort combineResults
+        where
+          (bsCoeffs, csCoeffs) = split as
+          lHalf = length bsCoeffs
+          omegaSquared = omega `pow` 2
+          bsValues = fft2 omegaSquared bsCoeffs
+          csValues = fft2 omegaSquared csCoeffs
+          combineResults = concat $ (\(i, bsi, csi)
+               -> let j = i + lHalf
+                      xi = omega `pow` i
+                  in [ (i, bsi + xi * csi)
+                     , (j, bsi - xi * csi)]
+              ) <$> List.zip3 [0..] bsValues csValues
 
 fft3
   :: GaloisField k
-  => (Int -> k) -- ^ function that gives for input n the principal (3^n)-th root of unity
+  => k          -- ^ function that gives for input n the principal (3^n)-th root of unity
   -> CoeffVec k -- ^ length should be n
   -> DFT k
-fft3 omega_n as
+fft3 omega as
   = case length as of
       1 -> as
-      n -> let (bs, cs, ds) = split3 as
-               (y0, y1, y2) = (fft3 omega_n bs, fft3 omega_n cs, fft3 omega_n ds)
-               (xs0, xs1, xs2) = split3 $ (pow (omega_n (log3 n))) <$> [0..n]
-           in combine $ List.zip6 y0 y1 y2 xs0 xs1 xs2
-  where
-    split3 ls = foldr (\(i, ai) (bsi, csi, dsi) -> case i `mod` 3 of
-                              0 -> (ai : bsi, csi, dsi)
-                              1 -> (bsi, ai : csi, dsi)
-                              2 -> (bsi, csi, ai : dsi)
-                       ) ([], [], []) (zip [1..] ls)
-    combine
-      = (\zs -> map (\(a, _, _) -> a) zs ++ map (\(_, b, _) -> b) zs ++ map (\(_, _, c) -> c) zs)
-      . map (\(yk0, yk1, yk2, xk0, xk1, xk2) ->
-               ( yk0 + xk0 * yk1 + xk0 * xk0 * yk2
-               , yk0 + xk1 * yk1 + xk1 * xk1 * yk2
-               , yk0 + xk2 * yk1 + xk2 * xk2 * yk2
-               )
-            )
+      n -> snd <$> List.sort combineResults
+        where
+          (bsCoeffs, csCoeffs, dsCoeffs) = split3 as
+          lThird = length bsCoeffs
+          omegaCubed = omega `pow` 3
+          bsValues = fft3 omegaCubed bsCoeffs
+          csValues = fft3 omegaCubed csCoeffs
+          dsValues = fft3 omegaCubed dsCoeffs
+          combineResults = concat $ (\(i, bsi, csi, dsi)
+               -> let j = i + lThird
+                      k = i + 2 * lThird
+                      xi = omega `pow` i
+                      xj = omega `pow` j
+                      xk = omega `pow` k
+                  in [ (i, bsi + xi * csi + xi * xi * dsi)
+                     , (j, bsi + xj * csi + xj * xj * dsi)
+                     , (k, bsi + xk * csi + xk * xk * dsi)]
+              ) <$> List.zip4 [0..] bsValues csValues dsValues
 
 -- | Split a list into a list containing the odd-numbered and one with
 -- the even-numbered elements.
 split :: [a] -> ([a],[a])
 split = foldr (\a (r1, r2) -> (a : r2, r1)) ([], [])
+
+split3 :: [a] -> ([a], [a], [a])
+split3 ls = foldr (\(i, ai) (bsi, csi, dsi)
+                   -> case i `mod` 3 of
+                        1 -> (ai : bsi, csi, dsi)
+                        2 -> (bsi, ai : csi, dsi)
+                        0 -> (bsi, csi, ai : dsi)
+                  ) ([], [], []) (zip [1..] ls)
 
 -- | Append minimal amount of zeroes until the list has a length which
 -- is a power of two.
@@ -120,77 +135,86 @@ log3 :: Int -> Int
 log3 = floor . logBase 3.0 . fromIntegral
 
 -- | Inverse discrete Fourier transformation, uses FFT.
-inverseDft :: GaloisField k => (Int -> k) -> DFT k -> CoeffVec k
-inverseDft primRootsUnity dft
+inverseDft2 :: GaloisField k => k -> DFT k -> CoeffVec k
+inverseDft2 primRootsUnity dft
   = let n = fromIntegral . length $ dft
-    in (/ n) <$> fft (recip . primRootsUnity) dft
+    in (/ n) <$> fft2 (recip primRootsUnity) dft
 
 -- | Inverse discrete Fourier transformation, uses FFT.
-inverseDft3 :: GaloisField k => (Int -> k) -> DFT k -> CoeffVec k
+inverseDft3 :: GaloisField k => k -> DFT k -> CoeffVec k
 inverseDft3 primRootsUnity dft
   = let n = fromIntegral . length $ dft
-    in (/ n) <$> fft3 (recip . primRootsUnity) dft
+    in (/ n) <$> fft3 (recip primRootsUnity) dft
 
 -- | Create a polynomial that goes through the given values.
-interpolate :: GaloisField k => (Int -> k) -> [k] -> VPoly k
-interpolate primRoots pts = toPoly . V.fromList $ inverseDft primRoots (padToNearestPowerOfTwo pts)
+interpolate :: GaloisField k => k -> [k] -> VPoly k
+interpolate primRoots pts = toPoly . V.fromList $ inverseDft2 primRoots (padToNearestPowerOfTwo pts)
 
 -- | Packed secrets
 shareSecrets
   :: (MonadRandom m, PrimeField f)
-  => [f]                            -- Secrets
+  => f
+  -> f
+  -> [f]                            -- Secrets
   -> Int                            -- Threshold
   -> Int                            -- Number of shares
   -> m [f]
-shareSecrets secrets t n
+shareSecrets omega2 omega3 secrets t n
   | t <= 0 || n <= 0 = panic $ "k and n must be positive integers"
   | t > n = panic $ "k cannot be greater than n"
-  -- TODO: N must be a power of 2
   | otherwise = do
       -- Sample polynomial
-      rndVs <- replicateM t rnd
-      -- Recover polynomial
-      let smallValues = 0 : secrets ++ rndVs
-      traceShowM $ length smallValues
-      -- Run backward FFT to recover polynomial in coefficient representation
-      let smallCoeffs = inverseDft getRootOfUnity smallValues
-          largeCoeffs = smallCoeffs ++ replicate (orderLarge - orderSmall) 0
-          largeValues = fft3 getRootOfUnity3 largeCoeffs
-      -- TODO: Use a different FFT (e.g FFT3). How to find a divisor or q-1?
-      -- Another solution is to generate the prime field
-      pure $ drop 1 largeValues
+      poly <- samplePolynomial omega2 secrets t
+      assertM (length poly == orderSmall) "Invalid number of small values"
+      -- Extend polynomial
+      let extendedPoly = poly ++ replicate (orderLarge - orderSmall) 0
+      assertM (length extendedPoly == orderLarge) "Invalid number of large values"
+
+      -- Evaluate polynomial to generate shares
+      let shares = fft3 omega3 extendedPoly
+      assertM (List.head shares == 0) "The first element of shares is not 0"
+
+      pure $ drop 1 shares
         where
           k = length secrets
           orderSmall = t + k + 1
           orderLarge = n + 1
 
+samplePolynomial :: (MonadRandom m, PrimeField f) => f -> [f] -> Int -> m [f]
+samplePolynomial omega2 secrets t = do
+  rndVs <- replicateM t rnd
+  let values = 0 : secrets ++ rndVs
+  -- Run backward FFT to recover polynomial in coefficient representation
+  pure $ inverseDft2 omega2 values
+
 reconstructSecrets
   :: PrimeField f
-  => (Int -> f)     -- Roots of unity
+  => f
+  -> f
   -> [f]            -- Shares
   -> Int            -- Number of secrets packed
   -> [f]
-reconstructSecrets _ [] _ = []
-reconstructSecrets primRoots shares k = secrets
+reconstructSecrets omega2 omega3 [] _ = []
+reconstructSecrets omega2 omega3 shares k = secrets
   where
     largeValues = 0 : shares
-    largeCoeffs = inverseDft3 getRootOfUnity3 largeValues
-    smallCoeffs = largeCoeffs -- take (length shares) largeCoeffs
-    smallValues = fft getRootOfUnity smallCoeffs
+    largeCoeffs = inverseDft3 omega3 largeValues
+    smallCoeffs = take (length shares) largeCoeffs
+    smallValues = fft2 omega2 smallCoeffs
     secrets = take k (drop 1 smallValues)
 
--- | Create shares from a secret
--- See https://mortendahl.github.io/2017/06/24/secret-sharing-part2/
-shareSecret :: (MonadRandom m, PrimeField f) => f -> Int -> Int -> m [f]
-shareSecret secret k n
-  | k <= 0 || n <= 0 = panic $ "k and n must be positive integers"
-  | k > n = panic $ "k cannot be greater than n"
-  | otherwise = do
-    rndVs <- replicateM (k-1) rnd
-    let coeffs = secret : rndVs ++ replicate (n + 1 - k) 0
-    pure $ fft getRootOfUnity coeffs
+-- -- | Create shares from a secret
+-- -- See https://mortendahl.github.io/2017/06/24/secret-sharing-part2/
+-- shareSecret :: (MonadRandom m, PrimeField f) => f -> Int -> Int -> m [f]
+-- shareSecret secret k n
+--   | k <= 0 || n <= 0 = panic $ "k and n must be positive integers"
+--   | k > n = panic $ "k cannot be greater than n"
+--   | otherwise = do
+--     rndVs <- replicateM (k-1) rnd
+--     let coeffs = secret : rndVs ++ replicate (n + 1 - k) 0
+--     pure $ fft2 getRootOfUnity coeffs
 
--- | Reconstruct secret using Fast Fourier Transform. Solve for f(0).
-reconstructSecret :: PrimeField f => [f] -> f
-reconstructSecret [] = 0
-reconstructSecret shares = eval (interpolate getRootOfUnity shares) 0
+-- -- | Reconstruct secret using Fast Fourier Transform. Solve for f(0).
+-- reconstructSecret :: PrimeField f => [f] -> f
+-- reconstructSecret [] = 0
+-- reconstructSecret shares = eval (interpolate getRootOfUnity shares) 0
