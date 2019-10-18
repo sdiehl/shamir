@@ -3,7 +3,8 @@ module Shamir.FFT
   -- , reconstructSecret
     shareSecrets
   , reconstructSecrets
-  , getRootOfUnity
+  , findNthRootOfUnity
+  , getRootOfUnity2
   , getRootOfUnity3
   , fft2
   , fft3
@@ -31,16 +32,22 @@ generateParameters :: Int -> Integer -> Integer -> (Integer, Integer, Integer)
 generateParameters = notImplemented
 
 -- | Calculate roots of unity of powers of 2
-getRootOfUnity :: forall f. PrimeField f => Int -> f
-getRootOfUnity k
+getRootOfUnity2 :: forall f. PrimeField f => Int -> f
+getRootOfUnity2 k
   | 0 <= k     = 5^((char (witness :: f) - 1) `div` (2^k))
   | otherwise  = panic "getRootOfUnity: No primitive root for given power of 2"
 
+-- | Calculate roots of unity of powers of 3
 getRootOfUnity3 :: forall f. PrimeField f => Int -> f
 getRootOfUnity3 k
   | 0 <= k     = 5^((char (witness :: f) - 1) `div` (3^k))
   | otherwise  = panic "getRootOfUnity: No primitive root for given power of 3"
 
+findNthRootOfUnity :: PrimeField f => (Int -> f) -> Int -> f
+findNthRootOfUnity getRootOfUnity n = go 2
+  where
+    go k = let root = getRootOfUnity k
+           in if root `pow` n == 1 then root else go (k + 1)
 
 -- | Fast Fourier transformation.
 fft2
