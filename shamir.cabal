@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 32f491fe74b45ba386f427a92c501cb73275a0451a17c9e739b088260deaa2f5
+-- hash: 5717ae2145aa19fb58ef61ec22ceefc5cc323d021299df1c06aa944c99044cda
 
 name:           shamir
 version:        0.1.0
@@ -27,7 +27,7 @@ source-repository head
 library
   exposed-modules:
       Shamir
-      Shamir.FFT
+      Shamir.Packed
   other-modules:
       Paths_shamir
   hs-source-dirs:

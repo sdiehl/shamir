@@ -47,7 +47,7 @@ library:
   source-dirs: src
   exposed-modules:
   - Shamir
-  - Shamir.FFT
+  - Shamir.Packed
 
 tests:
   shamir-test:

@@ -1,9 +1,7 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE ParallelListComp #-}
-module Shamir.FFT
-  ( -- shareSecret
-  -- , reconstructSecret
-    shareSecrets
+module Shamir.Packed
+  ( shareSecrets
   , reconstructSecrets
   , findNthRootOfUnity
   , getRootOfUnity2
@@ -12,10 +10,6 @@ module Shamir.FFT
   , fft3
   , inverseDft2
   , inverseDft3
-  , log2
-  , log3
-  , closestToPow2
-  , closestToPow3
   , newtonInterpolation
   , newtonEvaluate
   , NewtonPolynomial(..)
@@ -60,59 +54,49 @@ findNthRootOfUnity getRootOfUnity n = go 2
     go k = let root = getRootOfUnity k
            in if root `pow` n == 1 then root else go (k + 1)
 
+
+-------------------------------------
+-- Newton Polynomial Interpolation --
+-------------------------------------
+
+data NewtonPolynomial f = NewtonPolynomial
+  { npPoints :: [f]
+  , npCoeffs :: [f]
+  } deriving (Show, Eq)
+
+newtonInterpolation :: PrimeField f => [f] -> [f] -> NewtonPolynomial f
+newtonInterpolation points values = NewtonPolynomial points coeffs
+  where
+    initialStore = List.zip3 [0..] [0..] values
+    coeffs = (\(_, _, c) -> c) <$> store
+    g accStore i = take i accStore ++ ((indexLower, indexUpper, frac) : drop (i+1) accStore)
+      where
+        prevStoreElem = accStore List.!! (i-1)
+        currStoreElem = accStore List.!! i
+        (indexLower, _, coefLower) = prevStoreElem
+        (_, indexUpper, coefUpper) = currStoreElem
+        pointLower = points List.!! indexLower
+        pointUpper = points List.!! indexUpper
+        pointDiff = pointUpper - pointLower
+        pointDiffInv = recip pointDiff
+        coefDiff = coefUpper - coefLower
+        frac = coefDiff * pointDiffInv
+    f currStore j = foldl' g currStore (reverse [j..storeLen])
+    store = foldl' f initialStore [1..storeLen]
+    storeLen = length initialStore - 1
+
+newtonEvaluate :: PrimeField f => NewtonPolynomial f -> f -> f
+newtonEvaluate NewtonPolynomial{..} point
+  = sum $ (\(p, c) -> c * p) <$> zip newtonPoints npCoeffs
+  where
+    f acc i = let diff = point - (npPoints List.!! i)
+                  product = (acc List.!! i) * diff
+              in acc ++ [product]
+    newtonPoints = foldl' f [1] [0..length npPoints - 2]
+
 ---------
 -- FFT --
 ---------
-
--- | Fast Fourier transformation.
-fft2
-  :: GaloisField k
-  => k          -- ^ function that gives for input n the principal (2^n)-th root of unity
-  -> CoeffVec k -- ^ length should be n
-  -> DFT k
-fft2 omega as
-  = case length as of
-      1 -> as
-      n -> snd <$> List.sort combineResults
-        where
-          (bsCoeffs, csCoeffs) = split2 as
-          lHalf = length bsCoeffs
-          omegaSquared = omega `pow` 2
-          bsValues = fft2 omegaSquared bsCoeffs
-          csValues = fft2 omegaSquared csCoeffs
-          combineResults = concat $ (\(i, bsi, csi)
-               -> let j = i + lHalf
-                      xi = omega `pow` i
-                  in [ (i, bsi + xi * csi)
-                     , (j, bsi - xi * csi)]
-              ) <$> List.zip3 [0..] bsValues csValues
-
-fft3
-  :: GaloisField k
-  => k          -- ^ function that gives for input n the principal (3^n)-th root of unity
-  -> CoeffVec k -- ^ length should be n
-  -> DFT k
-fft3 omega as
-  = case length as of
-      1 -> as
-      n -> snd <$> List.sort combineResults
-        where
-          (bsCoeffs, csCoeffs, dsCoeffs) = split3 as
-          lThird = length bsCoeffs
-          omegaCubed = omega `pow` 3
-          bsValues = fft3 omegaCubed bsCoeffs
-          csValues = fft3 omegaCubed csCoeffs
-          dsValues = fft3 omegaCubed dsCoeffs
-          combineResults = concat $ (\(i, bsi, csi, dsi)
-               -> let j = i + lThird
-                      k = i + 2 * lThird
-                      xi = omega `pow` i
-                      xj = omega `pow` j
-                      xk = omega `pow` k
-                  in [ (i, bsi + xi * csi + xi * xi * dsi)
-                     , (j, bsi + xj * csi + xj * xj * dsi)
-                     , (k, bsi + xk * csi + xk * xk * dsi)]
-              ) <$> List.zip4 [0..] bsValues csValues dsValues
 
 -- | Split a list into a list containing the odd-numbered and one with
 -- the even-numbered elements.
@@ -178,6 +162,57 @@ log2 x = floorLog + correction
 log3 :: Int -> Int
 log3 = ceiling . logBase 3.0 . fromIntegral
 
+
+-- | Fast Fourier transformation.
+fft2
+  :: GaloisField k
+  => k          -- ^ function that gives for input n the principal (2^n)-th root of unity
+  -> CoeffVec k -- ^ length should be n
+  -> DFT k
+fft2 omega as
+  = case length as of
+      1 -> as
+      n -> snd <$> List.sort combineResults
+        where
+          (bsCoeffs, csCoeffs) = split2 as
+          lHalf = length bsCoeffs
+          omegaSquared = omega `pow` 2
+          bsValues = fft2 omegaSquared bsCoeffs
+          csValues = fft2 omegaSquared csCoeffs
+          combineResults = concat $ (\(i, bsi, csi)
+               -> let j = i + lHalf
+                      xi = omega `pow` i
+                  in [ (i, bsi + xi * csi)
+                     , (j, bsi - xi * csi)]
+              ) <$> List.zip3 [0..] bsValues csValues
+
+fft3
+  :: GaloisField k
+  => k          -- ^ function that gives for input n the principal (3^n)-th root of unity
+  -> CoeffVec k -- ^ length should be n
+  -> DFT k
+fft3 omega as
+  = case length as of
+      1 -> as
+      n -> snd <$> List.sort combineResults
+        where
+          (bsCoeffs, csCoeffs, dsCoeffs) = split3 as
+          lThird = length bsCoeffs
+          omegaCubed = omega `pow` 3
+          bsValues = fft3 omegaCubed bsCoeffs
+          csValues = fft3 omegaCubed csCoeffs
+          dsValues = fft3 omegaCubed dsCoeffs
+          combineResults = concat $ (\(i, bsi, csi, dsi)
+               -> let j = i + lThird
+                      k = i + 2 * lThird
+                      xi = omega `pow` i
+                      xj = omega `pow` j
+                      xk = omega `pow` k
+                  in [ (i, bsi + xi * csi + xi * xi * dsi)
+                     , (j, bsi + xj * csi + xj * xj * dsi)
+                     , (k, bsi + xk * csi + xk * xk * dsi)]
+              ) <$> List.zip4 [0..] bsValues csValues dsValues
+
 -- | Inverse discrete Fourier transformation, uses FFT.
 inverseDft2 :: GaloisField k => k -> DFT k -> CoeffVec k
 inverseDft2 primRootsUnity (padToNearestPow2 -> dft)
@@ -197,6 +232,17 @@ interpolate2 primRoots pts = toPoly . V.fromList $ inverseDft2 primRoots pts
 -- | Create a polynomial that goes through the given values.
 interpolate3 :: GaloisField k => k -> [k] -> VPoly k
 interpolate3 primRoots pts = toPoly . V.fromList $ inverseDft3 primRoots pts
+
+---------------------------
+-- Packed secrets scheme --
+---------------------------
+
+samplePolynomial :: (MonadRandom m, PrimeField f) => f -> [f] -> Int -> m [f]
+samplePolynomial omega2 secrets t = do
+  rndVs <- replicateM t rnd
+  let values = 0 : secrets ++ rndVs
+  -- Run backward FFT to recover polynomial in coefficient representation
+  pure $ inverseDft2 omega2 values
 
 -- | Packed secrets
 shareSecrets
@@ -227,29 +273,6 @@ shareSecrets omega2 omega3 secrets t n
           orderSmall = closestToPow2 (t + k + 1)
           orderLarge = closestToPow3 (n + 1)
 
-samplePolynomial :: (MonadRandom m, PrimeField f) => f -> [f] -> Int -> m [f]
-samplePolynomial omega2 secrets t = do
-  rndVs <- replicateM t rnd
-  let values = 0 : secrets ++ rndVs
-  -- Run backward FFT to recover polynomial in coefficient representation
-  pure $ inverseDft2 omega2 values
-
--- reconstructSecrets
---   :: PrimeField f
---   => f
---   -> f
---   -> [f]            -- Shares
---   -> Int            -- Number of secrets packed
---   -> [f]
--- reconstructSecrets omega2 omega3 [] _ = []
--- reconstructSecrets omega2 omega3 shares k = traceShow smallValues secrets
---   where
---     largeValues = 0 : shares
---     largeCoeffs = inverseDft3 omega3 largeValues
---     smallCoeffs = take (length shares) largeCoeffs
---     smallValues = fft2 omega2 (padToNearestPow2 smallCoeffs)
---     secrets = take k (drop 1 smallValues)
-
 reconstructSecrets
   :: forall f. PrimeField f
   => f
@@ -262,82 +285,4 @@ reconstructSecrets omega2 omega3 shares k
   = let points = 1 : ((omega3 `pow`) <$> [1..length shares])
         values = 0 : shares
         poly = newtonInterpolation points values
-          -- interpolate2 omega3 values
-          -- lagrangeInterpolate points values
-    in traceShow poly $ take k ((newtonEvaluate poly  . (omega2 `pow`)) <$> [1..])
-       -- take k ((eval poly  . (omega2 `pow`)) <$> [1..])
-  where
-    lagrangeInterpolate :: [f] -> [f] -> VPoly f
-    lagrangeInterpolate xs ys = traceShow phis sum
-      [ scale 0 f (roots `quot` (root x))
-      | f <- zipWith (/) ys phis
-      | x <- xs
-      ]
-      where
-        phis :: [f]
-        phis = map (eval (deriv roots)) xs
-        roots :: VPoly f
-        roots = foldl' (\acc xi -> acc * (root xi)) 1 xs   -- (X - x_0) * ... * (X - x_{n-1})
-        root xi = toPoly . V.fromList $ [-xi,  1]          -- (X - x_i)
-
--- -- | Create shares from a secret
--- -- See https://mortendahl.github.io/2017/06/24/secret-sharing-part2/
--- shareSecret :: (MonadRandom m, PrimeField f) => f -> Int -> Int -> m [f]
--- shareSecret secret k n
---   | k <= 0 || n <= 0 = panic $ "k and n must be positive integers"
---   | k > n = panic $ "k cannot be greater than n"
---   | otherwise = do
---     rndVs <- replicateM (k-1) rnd
---     let coeffs = secret : rndVs ++ replicate (n + 1 - k) 0
---     pure $ fft2 getRootOfUnity coeffs
-
--- -- | Reconstruct secret using Fast Fourier Transform. Solve for f(0).
--- reconstructSecret :: PrimeField f => [f] -> f
--- reconstructSecret [] = 0
--- reconstructSecret shares = eval (interpolate getRootOfUnity shares) 0
-
-data NewtonPolynomial f = NewtonPolynomial
-  { npPoints :: [f]
-  , npCoeffs :: [f]
-  } deriving (Show, Eq)
-
--- (3, 4, 3)
--- (2, 3, 9)
--- (1, 2, -12)
--- (0, 1, 8)
--- (2, 4, -3)
--- (1, 3, 2)
--- (0, 2, -10)
--- (1, 4, -13)
--- (0, 3, 4)
--- (0, 4, 0)
-
-newtonInterpolation :: PrimeField f => [f] -> [f] -> NewtonPolynomial f
-newtonInterpolation points values = NewtonPolynomial points coeffs
-  where
-    initialStore = List.zip3 [0..] [0..] values
-    coeffs = (\(_, _, c) -> c) <$> store
-    g accStore i = take i accStore ++ ((indexLower, indexUpper, frac) : drop (i+1) accStore)
-      where
-        prevStoreElem = accStore List.!! (i-1)
-        currStoreElem = accStore List.!! i
-        (indexLower, _, coefLower) = prevStoreElem
-        (_, indexUpper, coefUpper) = currStoreElem
-        pointLower = points List.!! indexLower
-        pointUpper = points List.!! indexUpper
-        pointDiff = pointUpper - pointLower
-        pointDiffInv = recip pointDiff
-        coefDiff = coefUpper - coefLower
-        frac = coefDiff * pointDiffInv
-    f currStore j = foldl' g currStore (reverse [j..storeLen])
-    store = foldl' f initialStore [1..storeLen]
-    storeLen = length initialStore - 1
-
-newtonEvaluate :: PrimeField f => NewtonPolynomial f -> f -> f
-newtonEvaluate NewtonPolynomial{..} point
-  = sum $ (\(p, c) -> c * p) <$> zip newtonPoints npCoeffs
-  where
-    f acc i = let diff = point - (npPoints List.!! i)
-                  product = (acc List.!! i) * diff
-              in acc ++ [product]
-    newtonPoints = foldl' f [1] [0..length npPoints - 2]
+    in take k ((newtonEvaluate poly  . (omega2 `pow`)) <$> [1..])
