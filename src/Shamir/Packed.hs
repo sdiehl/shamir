@@ -18,6 +18,8 @@ module Shamir.Packed
   , fft3
   , inverseDft2
   , inverseDft3
+  , interpolate2
+  , interpolate3
   , newtonInterpolation
   , newtonEvaluate
   , NewtonPolynomial(..)
@@ -26,10 +28,9 @@ module Shamir.Packed
 import Protolude hiding (quot)
 import Control.Error.Operator (assertM)
 import Control.Monad.Random (MonadRandom)
-import Data.Euclidean (quot)
 import Data.Field.Galois (PrimeField(..), rnd, GaloisField, pow, char)
 import qualified Data.List as List
-import Data.Poly (VPoly, toPoly, eval, scale, deriv)
+import Data.Poly (VPoly, toPoly)
 import qualified Data.Vector as V
 
 -- | Polynomial represented as a coefficient vector, little-endian
@@ -127,8 +128,7 @@ padToNearestPow2 xs = padToNearestPow2Of (length xs) xs
   where
     -- | Given n, append zeroes until the list has length 2^n.
     padToNearestPow2Of
-      :: Num f
-      => Int -- ^ n
+      :: Int -- ^ n
       -> [f] -- ^ list which should have length <= 2^n
       -> [f] -- ^ list which will have length 2^n
     padToNearestPow2Of i xs = xs ++ replicate padLength 0
@@ -142,8 +142,7 @@ padToNearestPow3 xs = padToNearestPow3Of (length xs) xs
   where
     -- | Given n, append zeroes until the list has length 3^n.
     padToNearestPow3Of
-      :: Num f
-      => Int -- ^ n
+      :: Int -- ^ n
       -> [f] -- ^ list which should have length <= 3^n
       -> [f] -- ^ list which will have length 3^n
     padToNearestPow3Of i xs = xs ++ replicate padLength 0

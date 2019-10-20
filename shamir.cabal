@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 5717ae2145aa19fb58ef61ec22ceefc5cc323d021299df1c06aa944c99044cda
+-- hash: 30d0f6a15c871ae1760b938e5bff76e7a17cc2ef179cd52e0f7008f55d3411de
 
 name:           shamir
 version:        0.1.0
@@ -33,7 +33,7 @@ library
   hs-source-dirs:
       src
   default-extensions: LambdaCase RecordWildCards OverloadedStrings NoImplicitPrelude FlexibleInstances FlexibleContexts ScopedTypeVariables RankNTypes
-  ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wredundant-constraints -Wno-unused-matches -Wno-name-shadowing -Wno-type-defaults -Wno-orphans -Wno-incomplete-uni-patterns -Wno-incomplete-patterns
+  ghc-options: -Wall -Werror -Wcompat -Wincomplete-record-updates -Wredundant-constraints -Wno-unused-matches -Wno-name-shadowing -Wno-type-defaults -Wno-orphans -Wno-incomplete-uni-patterns -Wno-incomplete-patterns
   build-depends:
       MonadRandom
     , base
@@ -53,7 +53,7 @@ test-suite shamir-test
   hs-source-dirs:
       test
   default-extensions: LambdaCase RecordWildCards OverloadedStrings NoImplicitPrelude FlexibleInstances FlexibleContexts ScopedTypeVariables RankNTypes
-  ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wredundant-constraints -Wno-unused-matches -Wno-name-shadowing -Wno-type-defaults -Wno-orphans -Wno-incomplete-uni-patterns -Wno-incomplete-patterns
+  ghc-options: -Wall -Werror -Wcompat -Wincomplete-record-updates -Wredundant-constraints -Wno-unused-matches -Wno-name-shadowing -Wno-type-defaults -Wno-orphans -Wno-incomplete-uni-patterns -Wno-incomplete-patterns
   build-depends:
       MonadRandom
     , QuickCheck
@@ -79,7 +79,7 @@ benchmark shamir-benchmarks
   hs-source-dirs:
       bench
   default-extensions: LambdaCase RecordWildCards OverloadedStrings NoImplicitPrelude FlexibleInstances FlexibleContexts ScopedTypeVariables RankNTypes
-  ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wredundant-constraints -Wno-unused-matches -Wno-name-shadowing -Wno-type-defaults -Wno-orphans -Wno-incomplete-uni-patterns -Wno-incomplete-patterns
+  ghc-options: -Wall -Werror -Wcompat -Wincomplete-record-updates -Wredundant-constraints -Wno-unused-matches -Wno-name-shadowing -Wno-type-defaults -Wno-orphans -Wno-incomplete-uni-patterns -Wno-incomplete-patterns
   build-depends:
       MonadRandom
     , QuickCheck

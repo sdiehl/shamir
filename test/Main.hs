@@ -5,10 +5,10 @@ module Main where
 
 import Protolude
 
-import Control.Monad.Random (getRandom)
+import Control.Monad.Random (getRandomR)
 import Data.Field.Galois (Prime, rnd, pow, PrimeField)
 import Data.List ((!!))
-import Data.Poly (VPoly, toPoly, eval, scale, deriv, unPoly)
+import Data.Poly (toPoly, eval)
 import qualified Data.Vector as V
 import Shamir (shareSecret, reconstructSecret)
 import Shamir.Packed as Packed
@@ -20,6 +20,12 @@ import Test.Tasty.QuickCheck
 type Fq = Prime 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001
 type Prime433 = Prime 433
 type Prime746497 = Prime 746497
+
+combinations :: Int -> [a] -> [[a]]
+combinations m xs = combsBySize xs !! m
+  where
+    combsBySize = foldr f ([[]] : repeat [])
+    f x next = zipWith (++) (map (map (x:)) ([]:next)) next
 
 ----------------------------
 -- Fast Fourier Transform --
@@ -91,7 +97,8 @@ test_packed_example_1 = do
       -- `n = share_count + 1` must be a power of 3
       omega3 = 150
   shares <- shareSecrets omega2 omega3 secrets t n
-  secrets @=? reconstructSecrets omega2 omega3 shares k
+  m <- getRandomR (k + t + 1, n)
+  secrets @=? reconstructSecrets omega2 omega3 (take m shares) k
 
 
 -- Example 2
@@ -108,7 +115,8 @@ test_packed_example_2 = do
                          -- `n = share_count + 1` must be a power of 3.
   secrets <- replicateM k (rnd @Prime746497)
   shares <- shareSecrets omega2 omega3 secrets t n
-  secrets @=? reconstructSecrets omega2 omega3 shares k
+  m <- getRandomR (k + t + 1, n)
+  secrets @=? reconstructSecrets omega2 omega3 (take m shares) k
 
 --------------------------
 -- Single secret scheme --
@@ -127,12 +135,6 @@ prop_shamir_lagrange secret = monadicIO $ do
   let successes = and $ (\i -> and (((==) secret . reconstructSecret) <$> take 100 (combinations i shares))
                         ) <$> [k..n]
   pure $ and [fails, successes]
-  where
-    combinations :: Int -> [a] -> [[a]]
-    combinations m xs = combsBySize xs !! m
-      where
-        combsBySize = foldr f ([[]] : repeat [])
-        f x next = zipWith (++) (map (map (x:)) ([]:next)) next
 
 ------------------------------------------------
 
@@ -155,8 +157,8 @@ main = defaultMain $
   , testGroup "Shamir secret sharing"
     [ testProperty "Lagrange" prop_shamir_lagrange
     , testGroup "Packed"
-      [ testCase "Small example" test_packed_example_1
-      , testCase "Medium example" test_packed_example_2
+      [ testCase "Example 1" test_packed_example_1
+      , testCase "Example 2" test_packed_example_2
       ]
     ]
   ]
