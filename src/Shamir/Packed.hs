@@ -1,3 +1,11 @@
+{-|
+Module      : Shamir.Packed
+Description : Shamir packed secrets sharing scheme
+Copyright   : (c) 2019 Adjoint Inc.
+License     : MIT
+Maintainer  : "Adjoint Inc (info@adjoint.io)"
+-}
+
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE ParallelListComp #-}
 module Shamir.Packed

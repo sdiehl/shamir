@@ -1,7 +1,15 @@
+{-|
+Module      : Shamir
+Description : Shamir secret sharing scheme using Lagrange interpolation
+Copyright   : (c) 2019 Adjoint Inc.
+License     : MIT
+Maintainer  : "Adjoint Inc (info@adjoint.io)"
+-}
+
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE ParallelListComp #-}
--- Shamir secret sharing using Lagrange interpolation
+--
 module Shamir
   ( shareSecret
   , reconstructSecret
