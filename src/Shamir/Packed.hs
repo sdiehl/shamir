@@ -18,11 +18,13 @@ module Shamir.Packed
   , fft3
   , inverseDft2
   , inverseDft3
-  , interpolate2
-  , interpolate3
+  , fftInterpolation2
+  , fftInterpolation3
   , newtonInterpolation
   , newtonEvaluate
   , NewtonPolynomial(..)
+  , closestToPow2
+  , closestToPow3
   ) where
 
 import Protolude hiding (quot)
@@ -222,23 +224,23 @@ fft3 omega as
 
 -- | Inverse discrete Fourier transformation, uses FFT.
 inverseDft2 :: GaloisField k => k -> DFT k -> CoeffVec k
-inverseDft2 primRootsUnity (padToNearestPow2 -> dft)
+inverseDft2 rootOfUnity (padToNearestPow2 -> dft)
   = let n = fromIntegral . length $ dft
-    in (/ n) <$> fft2 (recip primRootsUnity) dft
+    in (/ n) <$> fft2 (recip rootOfUnity) dft
 
 -- | Inverse discrete Fourier transformation, uses FFT.
 inverseDft3 :: GaloisField k => k -> DFT k -> CoeffVec k
-inverseDft3 primRootsUnity (padToNearestPow3 -> dft)
+inverseDft3 rootOfUnity (padToNearestPow3 -> dft)
   = let n = fromIntegral . length $ dft
-    in (/ n) <$> fft3 (recip primRootsUnity) dft
+    in (/ n) <$> fft3 (recip rootOfUnity) dft
 
 -- | Create a polynomial that goes through the given values.
-interpolate2 :: GaloisField k => k -> [k] -> VPoly k
-interpolate2 primRoots pts = toPoly . V.fromList $ inverseDft2 primRoots pts
+fftInterpolation2 :: GaloisField k => k -> [k] -> VPoly k
+fftInterpolation2 rootOfUnity pts = toPoly . V.fromList $ inverseDft2 rootOfUnity pts
 
 -- | Create a polynomial that goes through the given values.
-interpolate3 :: GaloisField k => k -> [k] -> VPoly k
-interpolate3 primRoots pts = toPoly . V.fromList $ inverseDft3 primRoots pts
+fftInterpolation3 :: GaloisField k => k -> [k] -> VPoly k
+fftInterpolation3 rootOfUnity pts = toPoly . V.fromList $ inverseDft3 rootOfUnity pts
 
 ---------------------------
 -- Packed secrets scheme --
@@ -266,10 +268,11 @@ shareSecrets omega2 omega3 secrets t n
   | otherwise = do
       -- Sample polynomial
       poly <- samplePolynomial omega2 secrets t
-      assertM (length poly == orderSmall) "Invalid number of small values"
+      assertM (length poly == orderSmall) ("Invalid number of small values:" <> show (length poly, orderSmall))
       -- Extend polynomial
       let extendedPoly = poly ++ replicate (orderLarge - orderSmall) 0
-      assertM (length extendedPoly == orderLarge) "Invalid number of large values"
+      traceShowM (t, length poly, orderSmall)
+      assertM (length extendedPoly == orderLarge) ("Invalid number of large values" <> show (length extendedPoly, orderLarge))
       -- Evaluate polynomial to generate shares
       let shares = fft3 omega3 extendedPoly
       assertM (List.head shares == 0) "The first element of shares is not 0"
