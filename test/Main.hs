@@ -86,37 +86,42 @@ test_newton_interpolation_general = do
 test_packed_example_1 :: Assertion
 test_packed_example_1 = do
   let secrets = [1,2,3] :: [Prime433]
-      t = 4 -- threshold
-      n = 8 -- #shares
+      t = 2 -- threshold
+      s = 8 -- #shares
       k = length secrets -- #secrets
       -- `m`-th principal root of unity in Zp,
       -- where `m = secret_count + threshold + 1`
       -- must be a power of 2
-      omega2 = 354
+      m = closestToPow2 (k + t + 1)
+      omega2 = findNthPrimitiveRootOfUnity getRootOfUnity2 (closestToPow2 m)
       -- `n`-th principal root of unity in Zp, where
       -- `n = share_count + 1` must be a power of 3
-      omega3 = 150
-  shares <- shareSecrets omega2 omega3 secrets t n
-  m <- getRandomR (k + t + 1, n)
-  secrets @=? reconstructSecrets omega2 omega3 (take m shares) k
-
+      n = closestToPow3 (s + 1)
+      omega3 = findNthPrimitiveRootOfUnity getRootOfUnity3 (closestToPow3 n)
+  shares <- shareSecrets omega2 omega3 secrets t s
+  l <- getRandomR (m, s)
+  secrets @=? reconstructSecrets omega2 omega3 (take l shares) k
 
 -- Example 2
 
 test_packed_example_2 :: Assertion
 test_packed_example_2 = do
-  let t = 155 -- threshold
-      n = 728 -- #shares
+  let t = 30 -- threshold
+      s = 728 -- #shares
       k = 100 -- #secrets
-      omega2 = 95660     -- `m`-th principal root of unity in Zp,
-                         -- where `m = secret_count + threshold + 1`
-                         -- must be a power of 2
-      omega3 = 610121    -- `n`-th principal root of unity in Zp, where
-                         -- `n = share_count + 1` must be a power of 3.
+      -- `m`-th principal root of unity in Zp,
+      -- where `m = secret_count + threshold + 1`
+      -- must be a power of 2
+      m = closestToPow2 (k + t + 1)
+      omega2 = findNthPrimitiveRootOfUnity getRootOfUnity2 (closestToPow2 m)
+      -- `n`-th principal root of unity in Zp, where
+      -- `n = share_count + 1` must be a power of 3
+      n = closestToPow3 (s + 1)
+      omega3 = findNthPrimitiveRootOfUnity getRootOfUnity3 (closestToPow3 n)
   secrets <- replicateM k (rnd @Prime746497)
-  shares <- shareSecrets omega2 omega3 secrets t n
-  m <- getRandomR (k + t + 1, n)
-  secrets @=? reconstructSecrets omega2 omega3 (take m shares) k
+  shares <- shareSecrets omega2 omega3 secrets t s
+  l <- getRandomR (closestToPow2 (k + t + 1), s)
+  secrets @=? reconstructSecrets omega2 omega3 (take l shares) k
 
 --------------------------
 -- Single secret scheme --

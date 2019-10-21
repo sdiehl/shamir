@@ -12,6 +12,7 @@ module Shamir.Packed
   ( shareSecrets
   , reconstructSecrets
   , findNthRootOfUnity
+  , findNthPrimitiveRootOfUnity
   , getRootOfUnity2
   , getRootOfUnity3
   , fft2
@@ -65,6 +66,13 @@ findNthRootOfUnity getRootOfUnity n = go 2
     go k = let root = getRootOfUnity k
            in if root `pow` n == 1 then root else go (k + 1)
 
+-- | As prime fields are integral domains, every primitive nth root of unity
+-- is a principal root of unity. It is sufficient to verify that \alpha^{n} \neq 1 for 1 \leq k < n
+findNthPrimitiveRootOfUnity :: (PrimeField f, Enum f) => (Int -> f) -> Int -> f
+findNthPrimitiveRootOfUnity getRootOfUnity n = foldr f root [2..root]
+  where
+    root = findNthRootOfUnity getRootOfUnity n
+    f e lroot = if e `pow` n == 1 then e else lroot
 
 -------------------------------------
 -- Newton Polynomial Interpolation --
@@ -271,7 +279,6 @@ shareSecrets omega2 omega3 secrets t n
       assertM (length poly == orderSmall) ("Invalid number of small values:" <> show (length poly, orderSmall))
       -- Extend polynomial
       let extendedPoly = poly ++ replicate (orderLarge - orderSmall) 0
-      traceShowM (t, length poly, orderSmall)
       assertM (length extendedPoly == orderLarge) ("Invalid number of large values" <> show (length extendedPoly, orderLarge))
       -- Evaluate polynomial to generate shares
       let shares = fft3 omega3 extendedPoly
