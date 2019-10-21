@@ -1,6 +1,15 @@
+{-|
+Module      : Shamir
+Description : Shamir secret sharing scheme using Lagrange interpolation
+Copyright   : (c) 2019 Adjoint Inc.
+License     : MIT
+Maintainer  : "Adjoint Inc (info@adjoint.io)"
+-}
+
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE ParallelListComp #-}
+--
 module Shamir
   ( shareSecret
   , reconstructSecret
@@ -43,10 +52,7 @@ reconstructSecret shares = eval (lagrangeInterpolate shares) 0
         xs, ys :: [f]
         (xs,ys) = foldr (\(Share a b) ~(as,bs) -> (a:as,b:bs)) ([],[]) xys
         phis :: [f]
-        phis = map (eval (deriv roots)) xs                 -- [(-x_0) * (x_0 - x_1) * ... * (x_0 - x_{n-1})
-                                                           -- ,(x_1 - x_0) * (-x_1) * ... * (x_1 - x_{n-1})
-                                                           -- ,...
-                                                           -- ,(x_{n-1} - x_0) * (x_{n-1} - x_1) ... * (- x_{n-1})]
+        phis = map (eval (deriv roots)) xs
         roots :: VPoly f
         roots = foldl' (\acc xi -> acc * (root xi)) 1 xs   -- (X - x_0) * ... * (X - x_{n-1})
         root xi = toPoly . V.fromList $ [-xi,  1]          -- (X - x_i)
