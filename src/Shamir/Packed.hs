@@ -261,14 +261,14 @@ samplePolynomial omega2 secrets t = do
   -- Run backward FFT to recover polynomial in coefficient representation
   pure $ inverseDft2 omega2 values
 
--- | Packed secrets
+-- | Share secrets
 shareSecrets
   :: (MonadRandom m, PrimeField f)
-  => f
-  -> f
-  -> [f]                            -- Secrets
-  -> Int                            -- Threshold
-  -> Int                            -- Number of shares
+  => f              -- ^ Primitive root of unity. Power of 2
+  -> f              -- ^ Primitive root of unity. Power of 3
+  -> [f]            -- ^ Secrets
+  -> Int            -- ^ Threshold
+  -> Int            -- ^ Number of shares
   -> m [f]
 shareSecrets omega2 omega3 secrets t n
   | t <= 0 || n <= 0 = panic $ "k and n must be positive integers"
@@ -290,12 +290,13 @@ shareSecrets omega2 omega3 secrets t n
           orderSmall = closestToPow2 (t + k + 1)
           orderLarge = closestToPow3 (n + 1)
 
+-- | Reconstruct secrets
 reconstructSecrets
   :: forall f. PrimeField f
-  => f
-  -> f
-  -> [f]            -- Shares
-  -> Int            -- Number of secrets packed
+  => f              -- ^ Primitive root of unity. Power of 2
+  -> f              -- ^ Primitive root of unity. Power of 3
+  -> [f]            -- ^ Shares
+  -> Int            -- ^ Number of secrets packed
   -> [f]
 reconstructSecrets omega2 omega3 [] _ = []
 reconstructSecrets omega2 omega3 shares k
