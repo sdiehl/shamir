@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 30d0f6a15c871ae1760b938e5bff76e7a17cc2ef179cd52e0f7008f55d3411de
+-- hash: e46ef41ff2e76519d57683f399230dd07e83d4080af27d3dac629b2107d8cb1e
 
 name:           shamir
 version:        0.1.0
@@ -42,6 +42,26 @@ library
     , poly
     , protolude
     , semirings
+    , vector
+  default-language: Haskell2010
+
+test-suite readme-test
+  type: exitcode-stdio-1.0
+  main-is: README.lhs
+  other-modules:
+      Paths_shamir
+  default-extensions: LambdaCase RecordWildCards OverloadedStrings NoImplicitPrelude FlexibleInstances FlexibleContexts ScopedTypeVariables RankNTypes
+  ghc-options: -Wall -Werror -Wcompat -Wincomplete-record-updates -Wredundant-constraints -Wno-unused-matches -Wno-name-shadowing -Wno-type-defaults -Wno-orphans -Wno-incomplete-uni-patterns -Wno-incomplete-patterns -pgmL markdown-unlit
+  build-depends:
+      MonadRandom
+    , base
+    , error-util
+    , galois-field >=1.0.0
+    , markdown-unlit
+    , poly
+    , protolude
+    , semirings
+    , shamir
     , vector
   default-language: Haskell2010
 

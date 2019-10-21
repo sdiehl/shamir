@@ -62,6 +62,15 @@ tests:
       - tasty-hunit
       - tasty-quickcheck
 
+  readme-test:
+    dependencies:
+      - base
+      - protolude
+      - shamir
+      - markdown-unlit
+    main: README.lhs
+    ghc-options: -pgmL markdown-unlit
+
 benchmarks:
   shamir-benchmarks:
     source-dirs: bench

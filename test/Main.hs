@@ -93,11 +93,11 @@ test_packed_example_1 = do
       -- where `m = secret_count + threshold + 1`
       -- must be a power of 2
       m = closestToPow2 (k + t + 1)
-      omega2 = findNthPrimitiveRootOfUnity getRootOfUnity2 (closestToPow2 m)
+      omega2 = findNthPrimitiveRootOfUnity getRootOfUnity2 m
       -- `n`-th principal root of unity in Zp, where
       -- `n = share_count + 1` must be a power of 3
       n = closestToPow3 (s + 1)
-      omega3 = findNthPrimitiveRootOfUnity getRootOfUnity3 (closestToPow3 n)
+      omega3 = findNthPrimitiveRootOfUnity getRootOfUnity3 n
   shares <- shareSecrets omega2 omega3 secrets t s
   l <- getRandomR (m, s)
   secrets @=? reconstructSecrets omega2 omega3 (take l shares) k
@@ -113,15 +113,34 @@ test_packed_example_2 = do
       -- where `m = secret_count + threshold + 1`
       -- must be a power of 2
       m = closestToPow2 (k + t + 1)
-      omega2 = findNthPrimitiveRootOfUnity getRootOfUnity2 (closestToPow2 m)
+      omega2 = findNthPrimitiveRootOfUnity getRootOfUnity2 m
       -- `n`-th principal root of unity in Zp, where
       -- `n = share_count + 1` must be a power of 3
       n = closestToPow3 (s + 1)
-      omega3 = findNthPrimitiveRootOfUnity getRootOfUnity3 (closestToPow3 n)
+      omega3 = findNthPrimitiveRootOfUnity getRootOfUnity3 n
   secrets <- replicateM k (rnd @Prime746497)
   shares <- shareSecrets omega2 omega3 secrets t s
   l <- getRandomR (closestToPow2 (k + t + 1), s)
   secrets @=? reconstructSecrets omega2 omega3 (take l shares) k
+
+prop_packed_example :: Property
+prop_packed_example = monadicIO $ do
+  t <- lift $ getRandomR (100, 200) -- threshold
+  k <- lift $ getRandomR (30, 50)  -- #secrets
+  -- `m`-th principal root of unity in Zp,
+  -- where `m = secret_count + threshold + 1`
+  -- must be a power of 2
+  let m = closestToPow2 (k + t + 1)
+  s <- lift $ getRandomR (m, 500) -- #shares
+  secrets <- lift $ replicateM k (rnd @Prime746497)
+  let omega2 = findNthPrimitiveRootOfUnity getRootOfUnity2 m
+      -- `n`-th principal root of unity in Zp, where
+      -- `n = share_count + 1` must be a power of 3
+      n = closestToPow3 (s + 1)
+      omega3 = findNthPrimitiveRootOfUnity getRootOfUnity3 n
+  shares <- lift $ shareSecrets omega2 omega3 secrets t s
+  l <- lift $ getRandomR (closestToPow2 (k + t + 1), s)
+  pure $ secrets == reconstructSecrets omega2 omega3 (take l shares) k
 
 --------------------------
 -- Single secret scheme --
@@ -164,6 +183,8 @@ main = defaultMain $
     , testGroup "Packed"
       [ testCase "Example 1" test_packed_example_1
       , testCase "Example 2" test_packed_example_2
+      , localOption (QuickCheckTests 10) $
+        testProperty "Property" prop_packed_example
       ]
     ]
   ]

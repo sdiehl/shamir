@@ -11,13 +11,25 @@ interpolation.
 
 ## Usage
 
-A simple example of sharing and reconstructing a secret:
+Import language extensions and modules:
 
 ```haskell
-import Protolude
-import Data.Field.Galois (Prime)
-import Shamir (shareSecret, reconstructSecret)
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeApplications #-}
 
+import Protolude
+import Control.Monad.Random (getRandomR)
+import Data.Field.Galois (Prime, rnd)
+import Shamir (shareSecret, reconstructSecret)
+import Shamir.Packed
+```
+
+
+### Single secret sharing
+
+Example of sharing and reconstructing a secret:
+
+```haskell
 type Fq = Prime 21888242871839275222246405745257275088696311157297823662689037894645226208583
 
 secret :: Fq
@@ -29,8 +41,8 @@ k = 3
 n :: Int
 n = 6
 
-main :: IO ()
-main = do
+simpleExample :: IO ()
+simpleExample = do
   putText $ "Parties: " <> show n
   putText $ "Threshold: " <> show k
   shares <- shareSecret secret k n
@@ -38,6 +50,42 @@ main = do
     <> (show $ secret == reconstructSecret (take k shares))
   putText $ "Secret reconstructed from less than minimum subset of shares: "
     <> (show $ secret == reconstructSecret (take (k - 1) shares))
+```
+
+### Packed secrets
+
+Generalized variant of Shamir's scheme to share an arbitrary number of secrets
+efficiently using the Fast Fourier Transform.
+
+```haskell
+type Prime746497 = Prime 746497
+
+packedExample :: IO ()
+packedExample = do
+  t <- getRandomR (100, 200) -- threshold
+  k <- getRandomR (30, 50)  -- #secrets
+  let m = closestToPow2 (k + t + 1)  -- m-th principal root of unity.
+                                     -- Must be a power of two.
+      omega2 = findNthPrimitiveRootOfUnity getRootOfUnity2 m
+  s <- getRandomR (m, 500) -- #shares
+
+  secrets <- replicateM k (rnd @Prime746497)
+  let n = closestToPow3 (s + 1)      -- n-th principal root of unity.
+                                     -- Must be a power of three.
+      omega3 = findNthPrimitiveRootOfUnity getRootOfUnity3 n
+
+  shares <- shareSecrets omega2 omega3 secrets t s
+  l <- getRandomR (closestToPow2 (k + t + 1), s)
+  putText $ "Packed secrets reconstructed from more than minimum subset of
+    shares: "
+    <> (show $ secrets == reconstructSecrets omega2 omega3 (take l shares) k)
+```
+
+```haskell
+main :: IO ()
+main = do
+  simpleExample
+  packedExample
 ```
 
 ## License
