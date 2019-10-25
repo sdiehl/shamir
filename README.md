@@ -1,3 +1,9 @@
+<p align="center">
+<a href="https://www.adjoint.io">
+  <img width="250" src="./.assets/adjoint.png" alt="Adjoint Logo" />
+</a>
+</p>
+
 # Shamir
 
 Shamir secret sharing is a cryptographic technique to split an arbitrary secret S
