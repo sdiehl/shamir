@@ -94,6 +94,11 @@ main = do
   packedExample
 ```
 
+## Disclaimer
+
+This is experimental code meant for research-grade projects only. Please do not
+use this code in production until it has matured significantly.
+
 ## License
 
 ```
