@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: e46ef41ff2e76519d57683f399230dd07e83d4080af27d3dac629b2107d8cb1e
+-- hash: 01db894cfe9158825439a13d2f0d60f100ab10761b99d612d2a4a15999e309c3
 
 name:           shamir
 version:        0.1.0
@@ -37,6 +37,7 @@ library
   build-depends:
       MonadRandom
     , base
+    , containers
     , error-util
     , galois-field >=1.0.0
     , poly
@@ -55,6 +56,7 @@ test-suite readme-test
   build-depends:
       MonadRandom
     , base
+    , containers
     , error-util
     , galois-field >=1.0.0
     , markdown-unlit
@@ -78,6 +80,7 @@ test-suite shamir-test
       MonadRandom
     , QuickCheck
     , base
+    , containers
     , error-util
     , galois-field >=1.0.0
     , poly
@@ -104,6 +107,7 @@ benchmark shamir-benchmarks
       MonadRandom
     , QuickCheck
     , base
+    , containers
     , criterion
     , error-util
     , galois-field >=1.0.0

@@ -64,7 +64,7 @@ simpleExample = do
     else putText $ "Success: A single secret cannot be reconstructed from a subset of shares smaller than the threshold"
 ```
 
-### Multiple packed secrets
+## Multiple packed secrets
 
 The Shamir packed secret sharing scheme is a generalized variant of Shamir's
 scheme that allows to share an arbitrary number of secrets.
@@ -110,11 +110,8 @@ packedExample = do
   Setup{..} <- setupParams
 
   -- Calculate primitive roots of unity
-  let omega2 = -- m-th principal root of unity for powers of two.
-               calcOmega2 threshold numOfSecrets
-
-      omega3 = -- n-th principal root of unity for powers of three.
-                calcOmega3 numOfShares
+  let omega2 = calcOmega2 threshold numOfSecrets
+      omega3 = calcOmega3 numOfShares
 
   -- Generate secrets
   secrets <- replicateM numOfSecrets (rnd @Prime746497)

@@ -13,6 +13,7 @@ description:         Please see the README on GitHub at <https://github.com/adjo
 
 dependencies:
 - base
+- containers
 - protolude
 - error-util
 - galois-field >= 1.0.0

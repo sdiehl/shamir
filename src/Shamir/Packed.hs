@@ -32,6 +32,7 @@ import           Control.Monad.Random   (MonadRandom)
 import           Data.Field.Galois      (GaloisField, PrimeField (..), char,
                                          pow, rnd)
 import qualified Data.List              as List
+import qualified Data.Map               as Map
 import           Data.Poly              (VPoly, toPoly)
 import qualified Data.Vector            as V
 import           Protolude              hiding (quot)
@@ -85,36 +86,51 @@ data NewtonPolynomial f = NewtonPolynomial
   , npCoeffs :: [f]
   } deriving (Show, Eq)
 
--- TODO: Make it faster
-newtonInterpolation :: PrimeField f => [f] -> [f] -> NewtonPolynomial f
+newtonInterpolation :: forall f. PrimeField f => [f] -> [f] -> NewtonPolynomial f
 newtonInterpolation points values = NewtonPolynomial points coeffs
   where
-    initialStore = List.zip3 [0..] [0..] values
-    coeffs = (\(_, _, c) -> c) <$> store
-    g accStore i = take i accStore ++ ((indexLower, indexUpper, frac) : drop (i+1) accStore)
+    initialStore :: Map Int (Int, Int, f)
+    initialStore = Map.fromList $ zip [0..] (List.zip3 [0..] [0..] values)
+    coeffs :: [f]
+    coeffs = toList $ (\(_, _, c) -> c) <$> store
+    g :: Map Int (Int, Int, f) -> Int -> Map Int (Int, Int, f)
+    g accStore i = Map.union
+                      (Map.insert i (indexLower, indexUpper, frac) (Map.take i accStore))
+                      (Map.drop (i+1) accStore)
       where
-        prevStoreElem = accStore List.!! (i-1)
-        currStoreElem = accStore List.!! i
-        (indexLower, _, coefLower) = prevStoreElem
-        (_, indexUpper, coefUpper) = currStoreElem
-        pointLower = points List.!! indexLower
-        pointUpper = points List.!! indexUpper
+        Just (indexLower, _, coefLower) = Map.lookup (i-1) accStore
+        Just (_, indexUpper, coefUpper) = Map.lookup i accStore
+        Just pointLower = Map.lookup indexLower pointsMap
+        Just pointUpper = Map.lookup indexUpper pointsMap
         pointDiff = pointUpper - pointLower
         pointDiffInv = recip pointDiff
         coefDiff = coefUpper - coefLower
         frac = coefDiff * pointDiffInv
-    f currStore j = foldl' g currStore (reverse [j..storeLen])
-    store = foldl' f initialStore [1..storeLen]
-    storeLen = length initialStore - 1
 
-newtonEvaluate :: PrimeField f => NewtonPolynomial f -> f -> f
+    f :: Map Int (Int, Int, f) -> Int -> Map Int (Int, Int, f)
+    f currStore j = foldl' g currStore (reverse [j..storeLen])
+    store :: Map Int (Int, Int, f)
+    store = foldl' f initialStore [1..storeLen]
+    pointsMap :: Map Int f
+    pointsMap = Map.fromList $ zip [0..] points
+    storeLen :: Int
+    storeLen = Map.size initialStore - 1
+
+newtonEvaluate :: forall f. PrimeField f => NewtonPolynomial f -> f -> f
 newtonEvaluate NewtonPolynomial{..} point
   = sum $ (\(p, c) -> c * p) <$> zip newtonPoints npCoeffs
   where
-    f acc i = let diff = point - (npPoints List.!! i)
-                  product = (acc List.!! i) * diff
-              in acc ++ [product]
-    newtonPoints = foldl' f [1] [0..length npPoints - 2]
+    f acc i = let Just p = Map.lookup i pointsMap
+                  Just el = Map.lookup i acc
+                  diff = point - p
+                  product = el * diff
+              in Map.insert (Map.size acc) product acc
+
+    newtonPoints :: [f]
+    newtonPoints = Map.elems $ foldl' f (Map.fromList [(0, 1)]) [0..Map.size pointsMap - 2]
+
+    pointsMap :: Map Int f
+    pointsMap = Map.fromList $ zip [0..] npPoints
 
 ---------
 -- FFT --
