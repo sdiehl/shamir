@@ -7,7 +7,6 @@ Maintainer  : "Adjoint Inc (info@adjoint.io)"
 -}
 
 {-# LANGUAGE ViewPatterns #-}
-{-# LANGUAGE ParallelListComp #-}
 module Shamir.Packed
   ( shareSecrets
   , reconstructSecrets
@@ -28,13 +27,14 @@ module Shamir.Packed
   , closestToPow3
   ) where
 
-import Protolude hiding (quot)
-import Control.Error.Operator (assertM)
-import Control.Monad.Random (MonadRandom)
-import Data.Field.Galois (PrimeField(..), rnd, GaloisField, pow, char)
-import qualified Data.List as List
-import Data.Poly (VPoly, toPoly)
-import qualified Data.Vector as V
+import           Control.Error.Operator (assertM)
+import           Control.Monad.Random   (MonadRandom)
+import           Data.Field.Galois      (GaloisField, PrimeField (..), char,
+                                         pow, rnd)
+import qualified Data.List              as List
+import           Data.Poly              (VPoly, toPoly)
+import qualified Data.Vector            as V
+import           Protolude              hiding (quot)
 
 -- | Polynomial represented as a coefficient vector, little-endian
 type CoeffVec f = [f]
@@ -52,14 +52,16 @@ type DFT f = [f]
 getRootOfUnity2 :: forall f. PrimeField f => Int -> f
 getRootOfUnity2 k
   | 0 <= k     = 5^((char (witness :: f) - 1) `div` (2^k))
-  | otherwise  = panic "getRootOfUnity: No primitive root for given power of 2"
+  | otherwise  = panic "No root of unity for given power of 2"
 
 -- | Calculate roots of unity of powers of 3
 getRootOfUnity3 :: forall f. PrimeField f => Int -> f
 getRootOfUnity3 k
   | 0 <= k     = 5^((char (witness :: f) - 1) `div` (3^k))
-  | otherwise  = panic "getRootOfUnity: No primitive root for given power of 3"
+  | otherwise  = panic "No root of unity for given power of 3"
 
+-- | Brute force algorithm to find primitive root of unity
+-- Do not use for very large prime numbers
 findNthRootOfUnity :: PrimeField f => (Int -> f) -> Int -> f
 findNthRootOfUnity getRootOfUnity n = go 2
   where
@@ -83,6 +85,7 @@ data NewtonPolynomial f = NewtonPolynomial
   , npCoeffs :: [f]
   } deriving (Show, Eq)
 
+-- TODO: Make it faster
 newtonInterpolation :: PrimeField f => [f] -> [f] -> NewtonPolynomial f
 newtonInterpolation points values = NewtonPolynomial points coeffs
   where
@@ -158,13 +161,13 @@ padToNearestPow3 xs = padToNearestPow3Of (length xs) xs
     padToNearestPow3Of i xs = xs ++ replicate padLength 0
       where
         padLength = nearestPow3 - length xs
-        nearestPow3 = 3 ^ (log3 i)
+        nearestPow3 = 3 ^ log3 i
 
 closestToPow2 :: Int -> Int
-closestToPow2 = ((^) 2) . log2
+closestToPow2 = (^) 2 . log2
 
 closestToPow3 :: Int -> Int
-closestToPow3 = ((^) 3) . log3
+closestToPow3 = (^) 3 . log3
 
 -- | Calculate ceiling of log base 2 of an integer.
 log2 :: Int -> Int
@@ -183,7 +186,7 @@ log3 = ceiling . logBase 3.0 . fromIntegral
 -- | Fast Fourier transformation.
 fft2
   :: GaloisField k
-  => k          -- ^ function that gives for input n the principal (2^n)-th root of unity
+  => k          -- ^ principal (2^n)-th root of unity
   -> CoeffVec k -- ^ length should be n
   -> DFT k
 fft2 omega as
@@ -205,7 +208,7 @@ fft2 omega as
 
 fft3
   :: GaloisField k
-  => k          -- ^ function that gives for input n the principal (3^n)-th root of unity
+  => k          -- ^ principal (3^n)-th root of unity
   -> CoeffVec k -- ^ length should be n
   -> DFT k
 fft3 omega as
@@ -271,8 +274,8 @@ shareSecrets
   -> Int            -- ^ Number of shares
   -> m [f]
 shareSecrets omega2 omega3 secrets t n
-  | t <= 0 || n <= 0 = panic $ "k and n must be positive integers"
-  | t > n = panic $ "k cannot be greater than n"
+  | t <= 0 || n <= 0 = panic "k and n must be positive integers"
+  | t > n = panic "k cannot be greater than n"
   | otherwise = do
       -- Sample polynomial
       poly <- samplePolynomial omega2 secrets t
@@ -303,4 +306,4 @@ reconstructSecrets omega2 omega3 shares k
   = let points = 1 : ((omega3 `pow`) <$> [1..length shares])
         values = 0 : shares
         poly = newtonInterpolation points values
-    in take k ((newtonEvaluate poly  . (omega2 `pow`)) <$> [1..])
+    in take k (newtonEvaluate poly  . (omega2 `pow`) <$> [1..])

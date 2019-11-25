@@ -4,7 +4,7 @@ import Protolude
 
 import Criterion.Main
 import Data.Pairing.BN254 (Fr)
-import Shamir (shareSecret, reconstructSecret)
+import Shamir             (reconstructSecret, shareSecret)
 
 secret :: Fr
 secret = 12345
