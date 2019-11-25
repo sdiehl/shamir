@@ -6,31 +6,40 @@ License     : MIT
 Maintainer  : "Adjoint Inc (info@adjoint.io)"
 -}
 
-{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE DeriveAnyClass, DeriveGeneric, ViewPatterns #-}
 module Shamir.Packed
-  ( shareSecrets
+  ( -- Secret sharing scheme
+    shareSecrets
   , reconstructSecrets
+
+  -- Roots of unity
   , findNthRootOfUnity
   , findNthPrimitiveRootOfUnity
+
+  -- FFT powers of 2
   , getRootOfUnity2
-  , getRootOfUnity3
+  , closestToPow2
   , fft2
-  , fft3
-  , inverseDft2
-  , inverseDft3
   , fftInterpolation2
+  , inverseDft2
+
+  -- FFT powers of 3
+  , closestToPow3
+  , getRootOfUnity3
+  , fft3
   , fftInterpolation3
+  , inverseDft3
+
+  -- Newton interpolation
+  , NewtonPolynomial(..)
   , newtonInterpolation
   , newtonEvaluate
-  , NewtonPolynomial(..)
-  , closestToPow2
-  , closestToPow3
   ) where
 
 import           Control.Error.Operator (assertM)
 import           Control.Monad.Random   (MonadRandom)
-import           Data.Field.Galois      (GaloisField, PrimeField (..), char,
-                                         pow, rnd)
+import           Data.Field.Galois      (GaloisField, PrimeField(..), char, pow,
+                                         rnd)
 import qualified Data.List              as List
 import qualified Data.Map               as Map
 import           Data.Poly              (VPoly, toPoly)
@@ -84,7 +93,8 @@ findNthPrimitiveRootOfUnity getRootOfUnity n = foldr f root [2..root]
 data NewtonPolynomial f = NewtonPolynomial
   { npPoints :: [f]
   , npCoeffs :: [f]
-  } deriving (Show, Eq)
+  } deriving (Show, Eq, Generic, NFData)
+
 
 newtonInterpolation :: forall f. PrimeField f => [f] -> [f] -> NewtonPolynomial f
 newtonInterpolation points values = NewtonPolynomial points coeffs

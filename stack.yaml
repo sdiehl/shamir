@@ -5,3 +5,5 @@ extra-deps:
   - galois-field-1.0.0
   - poly-0.3.2.0
   - semirings-0.5.1
+  - pairing-1.0.0
+  - elliptic-curve-0.3.0

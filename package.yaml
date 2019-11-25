@@ -78,6 +78,7 @@ benchmarks:
     main: Main.hs
     dependencies:
       - criterion
+      - pairing
       - QuickCheck
       - shamir
       - tasty
