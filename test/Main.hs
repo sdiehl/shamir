@@ -1,21 +1,19 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DataKinds, ScopedTypeVariables, TypeApplications #-}
 module Main where
 
 import Protolude
 
-import Control.Monad.Random (getRandomR)
-import Data.Field.Galois (Prime, rnd, pow, PrimeField)
-import Data.List ((!!))
-import Data.Poly (toPoly, eval)
-import qualified Data.Vector as V
-import Shamir (shareSecret, reconstructSecret)
-import Shamir.Packed as Packed
-import Test.QuickCheck.Monadic (monadicIO)
-import Test.Tasty
-import Test.Tasty.HUnit
-import Test.Tasty.QuickCheck
+import           Control.Monad.Random    (getRandomR)
+import           Data.Field.Galois       (Prime, PrimeField, pow, rnd)
+import           Data.List               ((!!))
+import           Data.Poly               (eval, toPoly)
+import qualified Data.Vector             as V
+import           Shamir                  (reconstructSecret, shareSecret)
+import           Shamir.Packed           as Packed
+import           Test.QuickCheck.Monadic (monadicIO)
+import           Test.Tasty
+import           Test.Tasty.HUnit
+import           Test.Tasty.QuickCheck
 
 type Fq = Prime 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001
 type Prime433 = Prime 433

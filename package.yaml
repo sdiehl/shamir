@@ -1,5 +1,5 @@
 name:                shamir
-version:             0.1.0
+version:             0.2.0
 github:              "adjoint-io/shamir"
 license:             MIT
 maintainer:          "Adjoint Inc (info@adjoint.io)"
@@ -13,6 +13,7 @@ description:         Please see the README on GitHub at <https://github.com/adjo
 
 dependencies:
 - base
+- containers
 - protolude
 - error-util
 - galois-field >= 1.0.0
@@ -77,6 +78,7 @@ benchmarks:
     main: Main.hs
     dependencies:
       - criterion
+      - pairing
       - QuickCheck
       - shamir
       - tasty

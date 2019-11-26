@@ -4,7 +4,12 @@
 </a>
 </p>
 
-# Shamir
+# Shamir Secret Sharing Scheme
+
+This library provides an implementation of the Shamir's secret scheme as well as
+its more general variant where many secrets can be shared together.
+
+## Single secret
 
 Shamir secret sharing is a cryptographic technique to split an arbitrary secret S
 into N parts, of which at least K are required to reconstruct S.
@@ -15,9 +20,9 @@ polynomial of K degree.
 Using a fixed set of points we can reconstruct the secret using Lagrange
 interpolation.
 
-## Usage
+### Usage
 
-Import language extensions and modules:
+Import language extensions and modules.
 
 ```haskell
 {-# LANGUAGE DataKinds #-}
@@ -29,11 +34,6 @@ import Data.Field.Galois (Prime, rnd)
 import Shamir (shareSecret, reconstructSecret)
 import Shamir.Packed
 ```
-
-
-### Single secret sharing
-
-Example of sharing and reconstructing a secret:
 
 ```haskell
 type Fq = Prime 21888242871839275222246405745257275088696311157297823662689037894645226208583
@@ -52,45 +52,94 @@ simpleExample = do
   putText $ "Parties: " <> show n
   putText $ "Threshold: " <> show k
   shares <- shareSecret secret k n
-  putText $ "Secret reconstructed from minimum subset of shares: "
-    <> (show $ secret == reconstructSecret (take k shares))
-  putText $ "Secret reconstructed from less than minimum subset of shares: "
-    <> (show $ secret == reconstructSecret (take (k - 1) shares))
+
+  -- Completeness
+  if secret == reconstructSecret (take k shares)
+    then putText $ "Success: A single secret can be reconstructed from a subset of shares bigger or equal than the threshold"
+    else putText $ "Failure: A single secret cannot be reconstructed from a subset of shares bigger or equal than the threshold"
+
+  -- Soundness
+  if secret == reconstructSecret (take (k - 1) shares)
+    then putText $ "Failure: A single secret can be reconstructed from a subset of shares smaller than the threshold"
+    else putText $ "Success: A single secret cannot be reconstructed from a subset of shares smaller than the threshold"
 ```
 
-### Packed secrets
+## Multiple packed secrets
 
-Generalized variant of Shamir's scheme to share an arbitrary number of secrets
-efficiently using the Fast Fourier Transform.
+The Shamir packed secret sharing scheme is a generalized variant of Shamir's
+scheme that allows to share an arbitrary number of secrets.
+Lagrange interpolation is not a viable algorithm when the number of shares or
+the number of secrets is high. To efficiently compute the interpolation we use
+the Fast Fourier Transform algorithm. This FFT approach, on the other hand,
+introduces several other constraints that are shown in the following example:
 
 ```haskell
 type Prime746497 = Prime 746497
 
+data Setup = Setup
+  { threshold    :: Int -- Privacy threshold
+  , numOfSecrets :: Int -- Number of secrets
+  , numOfShares  :: Int -- Number of shares. numOfShares >= orderSmall
+  , orderSmall   :: Int -- Number of coefficients to match privacy threshold
+                        -- orderSmall = closestToPow2 (t + k + 1)
+  }
+
+setupParams :: IO Setup
+setupParams = do
+  t <- getRandomR (100, 200)
+  k <- getRandomR (30, 50)
+  let o = closestToPow2 (k + t + 1)
+  s <- getRandomR (o , 500)
+  pure $ Setup t k s o
+
+-- Calculate m-th principal root of unity for powers of two.
+calcOmega2 :: Int -> Int -> Prime746497
+calcOmega2 threshold numOfSecrets =
+  let m = closestToPow2 (numOfSecrets + threshold + 1)
+  in findNthPrimitiveRootOfUnity getRootOfUnity2 m
+
+-- Calculate n-th principal root of unity for powers of three.
+calcOmega3 :: Int -> Prime746497
+calcOmega3 numOfShares =
+  let n = closestToPow3 (numOfShares + 1)
+  in findNthPrimitiveRootOfUnity getRootOfUnity3 n
+
 packedExample :: IO ()
 packedExample = do
-  t <- getRandomR (100, 200) -- threshold
-  k <- getRandomR (30, 50)  -- #secrets
-  let m = closestToPow2 (k + t + 1)  -- m-th principal root of unity.
-                                     -- Must be a power of two.
-      omega2 = findNthPrimitiveRootOfUnity getRootOfUnity2 m
-  s <- getRandomR (m, 500) -- #shares
+  -- Setup parameters
+  Setup{..} <- setupParams
 
-  secrets <- replicateM k (rnd @Prime746497)
-  let n = closestToPow3 (s + 1)      -- n-th principal root of unity.
-                                     -- Must be a power of three.
-      omega3 = findNthPrimitiveRootOfUnity getRootOfUnity3 n
+  -- Calculate primitive roots of unity
+  let omega2 = calcOmega2 threshold numOfSecrets
+      omega3 = calcOmega3 numOfShares
 
-  shares <- shareSecrets omega2 omega3 secrets t s
-  l <- getRandomR (closestToPow2 (k + t + 1), s)
-  putText $ "Packed secrets reconstructed from more than minimum subset of
-    shares: "
-    <> (show $ secrets == reconstructSecrets omega2 omega3 (take l shares) k)
+  -- Generate secrets
+  secrets <- replicateM numOfSecrets (rnd @Prime746497)
+
+  -- Generate shares
+  shares <- shareSecrets omega2 omega3 secrets threshold numOfShares
+
+  -- Completeness
+  if secrets == reconstructSecrets omega2 omega3 (take orderSmall shares) numOfSecrets
+    then putText $ "Success: Multiple packed secrets can be reconstructed from a subset of shares bigger or equal than the threshold"
+    else putText $ "Failure: Multiple packed secrets cannot be reconstructed from a subset of shares bigger or equal than the threshold"
+
+  -- Soundness
+  if secrets /= reconstructSecrets omega2 omega3 (take (orderSmall - 1) shares) numOfSecrets
+    then putText $ "Failure: Multiple packed secrets can be reconstructed from a subset of shares smaller than the threshold"
+    else putText $ "Success: Multiple packed secrets cannot be reconstructed from a subset of shares smaller than the threshold"
 ```
+
+We use markdown-unlit to ensure the code in the readme is valid. A `main`
+function is required.
 
 ```haskell
 main :: IO ()
 main = do
+  -- Single secret sharing scheme
   simpleExample
+
+  -- Multiple packed secrets sharing scheme
   packedExample
 ```
 
