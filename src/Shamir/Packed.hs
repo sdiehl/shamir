@@ -46,14 +46,6 @@ import           Data.Poly              (VPoly, toPoly)
 import qualified Data.Vector            as V
 import           Protolude              hiding (quot)
 
--- | Polynomial represented as a coefficient vector, little-endian
-type CoeffVec f = [f]
-
--- | Discrete Fourier transform. Can be interpreted as some polynomial
--- evaluated at certain roots of unity. (In our case the length of
--- these lists will be a power of two.)
-type DFT f = [f]
-
 --------------------
 -- Roots of unity --
 --------------------
@@ -96,6 +88,7 @@ data NewtonPolynomial f = NewtonPolynomial
   } deriving (Show, Eq, Generic, NFData)
 
 
+-- | Newton's divided differences interpolation polynomial for a given set of data points.
 newtonInterpolation :: forall f. PrimeField f => [f] -> [f] -> NewtonPolynomial f
 newtonInterpolation points values = NewtonPolynomial points coeffs
   where
@@ -126,6 +119,7 @@ newtonInterpolation points values = NewtonPolynomial points coeffs
     storeLen :: Int
     storeLen = Map.size initialStore - 1
 
+-- | Evaluate Newton's polynomial on a given point
 newtonEvaluate :: forall f. PrimeField f => NewtonPolynomial f -> f -> f
 newtonEvaluate NewtonPolynomial{..} point
   = sum $ (\(p, c) -> c * p) <$> zip newtonPoints npCoeffs
@@ -146,18 +140,30 @@ newtonEvaluate NewtonPolynomial{..} point
 -- FFT --
 ---------
 
--- | Split a list into a list containing the odd-numbered and one with
--- the even-numbered elements.
-split2 :: [a] -> ([a],[a])
-split2 = foldr (\a (r1, r2) -> (a : r2, r1)) ([], [])
+-- | Polynomial represented as a coefficient vector, little-endian
+type CoeffVec f = [f]
 
-split3 :: [a] -> ([a], [a], [a])
-split3 ls = foldr (\(i, ai) (bsi, csi, dsi)
-                   -> case i `mod` 3 of
-                        0 -> (ai : bsi, csi, dsi)
-                        1 -> (bsi, ai : csi, dsi)
-                        2 -> (bsi, csi, ai : dsi)
-                  ) ([], [], []) (zip [0..] ls)
+-- | Discrete Fourier transform. Can be interpreted as some polynomial
+-- evaluated at certain roots of unity. (In our case the length of
+-- these lists will be a power of two.)
+type DFT f = [f]
+
+---------------------
+-- FFT powers of 2 --
+---------------------
+
+-- | Round to the closest power of 2
+closestToPow2 :: Int -> Int
+closestToPow2 = (^) 2 . log2
+
+-- | Calculate ceiling of log base 2 of an integer.
+log2 :: Int -> Int
+log2 x = floorLog + correction
+  where
+    floorLog = finiteBitSize x - 1 - countLeadingZeros x
+    correction = if countTrailingZeros x < floorLog
+                 then 1
+                 else 0
 
 -- | Append minimal amount of zeroes until the list has a length which
 -- is a power of two.
@@ -175,41 +181,13 @@ padToNearestPow2 xs = padToNearestPow2Of (length xs) xs
         padLength = nearestPow2 - length xs
         nearestPow2 = bit $ log2 i
 
-padToNearestPow3 :: forall f. Num f => [f] -> [f]
-padToNearestPow3 [] = []
-padToNearestPow3 xs = padToNearestPow3Of (length xs) xs
-  where
-    -- | Given n, append zeroes until the list has length 3^n.
-    padToNearestPow3Of
-      :: Int -- ^ n
-      -> [f] -- ^ list which should have length <= 3^n
-      -> [f] -- ^ list which will have length 3^n
-    padToNearestPow3Of i xs = xs ++ replicate padLength 0
-      where
-        padLength = nearestPow3 - length xs
-        nearestPow3 = 3 ^ log3 i
 
-closestToPow2 :: Int -> Int
-closestToPow2 = (^) 2 . log2
+-- | Split a list into a list containing the odd-numbered and one with
+-- the even-numbered elements.
+split2 :: [a] -> ([a],[a])
+split2 = foldr (\a (r1, r2) -> (a : r2, r1)) ([], [])
 
-closestToPow3 :: Int -> Int
-closestToPow3 = (^) 3 . log3
-
--- | Calculate ceiling of log base 2 of an integer.
-log2 :: Int -> Int
-log2 x = floorLog + correction
-  where
-    floorLog = finiteBitSize x - 1 - countLeadingZeros x
-    correction = if countTrailingZeros x < floorLog
-                 then 1
-                 else 0
-
--- | Calculate ceiling of log base 3 of an integer.
-log3 :: Int -> Int
-log3 = ceiling . logBase 3.0 . fromIntegral
-
-
--- | Fast Fourier transformation.
+-- | Fast Fourier transformation for powers of 2.
 fft2
   :: GaloisField k
   => k          -- ^ principal (2^n)-th root of unity
@@ -232,6 +210,57 @@ fft2 omega as
                      , (j, bsi - xi * csi)]
               ) <$> List.zip3 [0..] bsValues csValues
 
+-- | Inverse discrete Fourier transformation of powers of 2, uses FFT.
+inverseDft2 :: GaloisField k => k -> DFT k -> CoeffVec k
+inverseDft2 rootOfUnity (padToNearestPow2 -> dft)
+  = let n = fromIntegral . length $ dft
+    in (/ n) <$> fft2 (recip rootOfUnity) dft
+
+-- | Create a polynomial that goes through the given values.
+fftInterpolation2 :: GaloisField k => k -> [k] -> VPoly k
+fftInterpolation2 rootOfUnity pts = toPoly . V.fromList $ inverseDft2 rootOfUnity pts
+
+---------------------
+-- FFT powers of 3 --
+---------------------
+
+-- | Round to the closest power of 3.
+closestToPow3 :: Int -> Int
+closestToPow3 = (^) 3 . log3
+
+-- | Calculate ceiling of log base 3 of an integer.
+log3 :: Int -> Int
+log3 = ceiling . logBase 3.0 . fromIntegral
+
+-- | Append minimal amount of zeroes until the list has a length which
+-- is a power of three.
+padToNearestPow3 :: forall f. Num f => [f] -> [f]
+padToNearestPow3 [] = []
+padToNearestPow3 xs = padToNearestPow3Of (length xs) xs
+  where
+    -- | Given n, append zeroes until the list has length 3^n.
+    padToNearestPow3Of
+      :: Int -- ^ n
+      -> [f] -- ^ list which should have length <= 3^n
+      -> [f] -- ^ list which will have length 3^n
+    padToNearestPow3Of i xs = xs ++ replicate padLength 0
+      where
+        padLength = nearestPow3 - length xs
+        nearestPow3 = 3 ^ log3 i
+
+-- | Split a list into three lists l_0, l_1, l_2 containing
+-- the elements in the original list whose original position modulo 3
+-- are 0, 1 and 2 respectively.
+split3 :: [a] -> ([a], [a], [a])
+split3 ls = foldr (\(i, ai) (bsi, csi, dsi)
+                   -> case i `mod` 3 of
+                        0 -> (ai : bsi, csi, dsi)
+                        1 -> (bsi, ai : csi, dsi)
+                        2 -> (bsi, csi, ai : dsi)
+                  ) ([], [], []) (zip [0..] ls)
+
+
+-- | Fast Fourier transformation for powers of 3.
 fft3
   :: GaloisField k
   => k          -- ^ principal (3^n)-th root of unity
@@ -259,21 +288,11 @@ fft3 omega as
                      , (k, bsi + xk * csi + xk * xk * dsi)]
               ) <$> List.zip4 [0..] bsValues csValues dsValues
 
--- | Inverse discrete Fourier transformation, uses FFT.
-inverseDft2 :: GaloisField k => k -> DFT k -> CoeffVec k
-inverseDft2 rootOfUnity (padToNearestPow2 -> dft)
-  = let n = fromIntegral . length $ dft
-    in (/ n) <$> fft2 (recip rootOfUnity) dft
-
--- | Inverse discrete Fourier transformation, uses FFT.
+-- | Inverse discrete Fourier transformation for powers of 3, uses FFT.
 inverseDft3 :: GaloisField k => k -> DFT k -> CoeffVec k
 inverseDft3 rootOfUnity (padToNearestPow3 -> dft)
   = let n = fromIntegral . length $ dft
     in (/ n) <$> fft3 (recip rootOfUnity) dft
-
--- | Create a polynomial that goes through the given values.
-fftInterpolation2 :: GaloisField k => k -> [k] -> VPoly k
-fftInterpolation2 rootOfUnity pts = toPoly . V.fromList $ inverseDft2 rootOfUnity pts
 
 -- | Create a polynomial that goes through the given values.
 fftInterpolation3 :: GaloisField k => k -> [k] -> VPoly k
